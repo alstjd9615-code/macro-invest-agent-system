@@ -77,3 +77,6 @@ known-first-party = ["macro_invest_agent_platform"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps", "core", "domain", "evals", "mcp", "pipelines"]
