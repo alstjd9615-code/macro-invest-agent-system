@@ -60,8 +60,6 @@ class TestSignalService:
         """Test that signal with no rules is rejected."""
         from pydantic import ValidationError
 
-        service = SignalService()
-
         with pytest.raises(ValidationError):
             SignalDefinition(
                 signal_id="invalid",

@@ -28,9 +28,7 @@ async def evaluate_rules(rule_name: str, condition: str, snapshot: MacroSnapshot
     return 0.5
 
 
-async def evaluate_inflation_rule(
-    snapshot: MacroSnapshot, threshold: float
-) -> float:
+async def evaluate_inflation_rule(snapshot: MacroSnapshot, threshold: float) -> float:
     """Check if inflation is below threshold.
 
     Args:
@@ -43,9 +41,7 @@ async def evaluate_inflation_rule(
     # Placeholder: look for inflation feature and compare
     from domain.macro.enums import MacroIndicatorType
 
-    inflation_feature = snapshot.get_feature_by_indicator(
-        MacroIndicatorType.INFLATION
-    )
+    inflation_feature = snapshot.get_feature_by_indicator(MacroIndicatorType.INFLATION)
     if not inflation_feature:
         return 0.0
 

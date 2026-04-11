@@ -6,8 +6,8 @@ import pytest
 
 from domain.macro.enums import MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
-from domain.signals.enums import SignalStrength, SignalType
 from domain.signals.engine import SignalEngine
+from domain.signals.enums import SignalStrength, SignalType
 from domain.signals.models import SignalDefinition, SignalRule
 
 
