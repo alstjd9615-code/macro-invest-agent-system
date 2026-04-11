@@ -18,6 +18,7 @@ dependencies = [
     "polars>=1.0.0",
     "prefect>=3.0.0",
     "streamlit>=1.37.0",
+    "structlog>=24.1.0",
 ]
 
 [project.optional-dependencies]

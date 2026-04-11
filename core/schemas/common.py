@@ -14,8 +14,8 @@ Design rules:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Generic, TypeVar
+from datetime import UTC, datetime
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -55,7 +55,7 @@ class FreshnessMetadata(BaseModel):
     )
 
     @classmethod
-    def now(cls, expires_at: datetime | None = None) -> "FreshnessMetadata":
+    def now(cls, expires_at: datetime | None = None) -> FreshnessMetadata:
         """Construct a :class:`FreshnessMetadata` stamped with the current UTC time.
 
         Args:
@@ -64,7 +64,7 @@ class FreshnessMetadata(BaseModel):
         Returns:
             A new :class:`FreshnessMetadata` instance.
         """
-        now_utc = datetime.now(tz=timezone.utc)
+        now_utc = datetime.now(tz=UTC)
         stale = expires_at is not None and now_utc >= expires_at
         return cls(computed_at=now_utc, expires_at=expires_at, is_stale=stale)
 
@@ -92,12 +92,12 @@ class AuditMetadata(BaseModel):
         description="Distributed trace identifier, if available.",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc),
+        default_factory=lambda: datetime.now(tz=UTC),
         description="UTC timestamp when this record was created.",
     )
 
     @classmethod
-    def new(cls, trace_id: str | None = None) -> "AuditMetadata":
+    def new(cls, trace_id: str | None = None) -> AuditMetadata:
         """Create a fresh :class:`AuditMetadata` instance.
 
         Args:
@@ -141,7 +141,7 @@ class ErrorDetail(BaseModel):
     )
 
     @classmethod
-    def from_app_error(cls, exc: Exception, request_id: str | None = None) -> "ErrorDetail":
+    def from_app_error(cls, exc: Exception, request_id: str | None = None) -> ErrorDetail:
         """Construct an :class:`ErrorDetail` from an :class:`~core.exceptions.base.AppError`.
 
         Falls back to generic values for non-AppError exceptions to avoid
@@ -176,7 +176,7 @@ class ErrorDetail(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class BaseResponse(BaseModel, Generic[DataT]):
+class BaseResponse[T](BaseModel):
     """Generic response envelope used by all API endpoints.
 
     Wraps a typed ``data`` payload with a ``success`` flag and optional
@@ -190,8 +190,10 @@ class BaseResponse(BaseModel, Generic[DataT]):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     success: bool = Field(default=True, description="True when the request succeeded.")
-    data: DataT = Field(..., description="The response payload.")
+    data: T = Field(..., description="The response payload.")
     audit: AuditMetadata | None = Field(
         default=None,
         description="Optional audit metadata for tracing and debugging.",

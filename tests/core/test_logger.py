@@ -3,10 +3,8 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 from core.config.settings import get_settings
-from core.logging.logger import _configured, get_logger, get_trace_id, set_trace_id
+from core.logging.logger import get_logger, get_trace_id, set_trace_id
 
 
 class TestTraceId:
@@ -50,7 +48,6 @@ class TestGetLogger:
         logger_mod._configured = False
 
     def test_returns_logger_instance(self) -> None:
-        import structlog
 
         log = get_logger(__name__)
         assert log is not None

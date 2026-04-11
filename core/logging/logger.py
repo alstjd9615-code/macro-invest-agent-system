@@ -21,7 +21,7 @@ import logging
 import sys
 import uuid
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from structlog.types import FilteringBoundLogger
@@ -148,4 +148,4 @@ def get_logger(name: str) -> FilteringBoundLogger:
         A structlog ``BoundLogger`` ready to use.
     """
     _configure_structlog()
-    return structlog.get_logger(name)  # type: ignore[no-any-return]
+    return cast(FilteringBoundLogger, structlog.get_logger(name))

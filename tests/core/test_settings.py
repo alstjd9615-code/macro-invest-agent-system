@@ -4,6 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from core.config.settings import Environment, LogLevel, Settings, get_settings
 
@@ -119,14 +120,12 @@ class TestSettingsValidation:
         get_settings.cache_clear()
 
     def test_invalid_app_env_raises(self) -> None:
-        with patch.dict(os.environ, {"APP_ENV": "not_a_valid_env"}):
-            with pytest.raises(Exception):
-                Settings()
+        with patch.dict(os.environ, {"APP_ENV": "not_a_valid_env"}), pytest.raises(ValidationError):
+            Settings()
 
     def test_invalid_log_level_raises(self) -> None:
-        with patch.dict(os.environ, {"LOG_LEVEL": "VERBOSE"}):
-            with pytest.raises(Exception):
-                Settings()
+        with patch.dict(os.environ, {"LOG_LEVEL": "VERBOSE"}), pytest.raises(ValidationError):
+            Settings()
 
 
 class TestGetSettingsSingleton:

@@ -1,7 +1,7 @@
 """Unit tests for core/schemas/common.py."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
@@ -14,9 +14,9 @@ class TestFreshnessMetadata:
     """FreshnessMetadata stores and reports freshness correctly."""
 
     def test_now_sets_computed_at_to_utc(self) -> None:
-        before = datetime.now(tz=timezone.utc)
+        before = datetime.now(tz=UTC)
         fm = FreshnessMetadata.now()
-        after = datetime.now(tz=timezone.utc)
+        after = datetime.now(tz=UTC)
         assert before <= fm.computed_at <= after
 
     def test_no_expiry_is_not_stale(self) -> None:
@@ -25,19 +25,19 @@ class TestFreshnessMetadata:
         assert fm.expires_at is None
 
     def test_future_expiry_is_not_stale(self) -> None:
-        future = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+        future = datetime.now(tz=UTC) + timedelta(hours=1)
         fm = FreshnessMetadata.now(expires_at=future)
         assert fm.is_stale is False
 
     def test_past_expiry_is_stale(self) -> None:
-        past = datetime.now(tz=timezone.utc) - timedelta(seconds=1)
+        past = datetime.now(tz=UTC) - timedelta(seconds=1)
         fm = FreshnessMetadata.now(expires_at=past)
         assert fm.is_stale is True
 
     def test_immutable(self) -> None:
         fm = FreshnessMetadata.now()
-        with pytest.raises(Exception):
-            fm.is_stale = False  # type: ignore[misc]
+        with pytest.raises(PydanticValidationError):
+            fm.is_stale = False
 
     def test_missing_computed_at_raises(self) -> None:
         with pytest.raises(PydanticValidationError):
@@ -65,15 +65,15 @@ class TestAuditMetadata:
         assert audit.trace_id is None
 
     def test_created_at_is_utc(self) -> None:
-        before = datetime.now(tz=timezone.utc)
+        before = datetime.now(tz=UTC)
         audit = AuditMetadata.new()
-        after = datetime.now(tz=timezone.utc)
+        after = datetime.now(tz=UTC)
         assert before <= audit.created_at <= after
 
     def test_immutable(self) -> None:
         audit = AuditMetadata.new()
-        with pytest.raises(Exception):
-            audit.trace_id = "new-trace"  # type: ignore[misc]
+        with pytest.raises(PydanticValidationError):
+            audit.trace_id = "new-trace"
 
 
 class TestErrorDetail:
@@ -115,8 +115,8 @@ class TestErrorDetail:
 
     def test_immutable(self) -> None:
         err = ErrorDetail(error_code="X", message="y")
-        with pytest.raises(Exception):
-            err.error_code = "Z"  # type: ignore[misc]
+        with pytest.raises(PydanticValidationError):
+            err.error_code = "Z"
 
 
 class TestBaseResponse:
@@ -141,8 +141,8 @@ class TestBaseResponse:
         assert response.audit.trace_id == "t-999"
 
     def test_generic_with_dict(self) -> None:
-        payload = {"key": "value"}
-        response: BaseResponse[dict] = BaseResponse(data=payload)
+        payload: dict[str, str] = {"key": "value"}
+        response: BaseResponse[dict[str, str]] = BaseResponse(data=payload)
         assert response.data["key"] == "value"
 
     def test_missing_data_raises(self) -> None:
