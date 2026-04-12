@@ -71,8 +71,8 @@ The macro investment agent platform is organized into modular layers that clearl
 - Thin layer: orchestration, not business logic
 - Future: add caching, audit logging, persistence
 
-### MCP Layer (`mcp/schemas/`)
-**Purpose**: Define request/response contracts for external systems (read-only interface).
+### MCP Layer (`mcp/schemas/`, `mcp/tools/`)
+**Purpose**: Define request/response contracts and provide thin callable entrypoints for external systems (read-only interface).
 
 **Base Schemas** (`mcp/schemas/common.py`):
 - `MCPRequest`: Base for all requests (request_id, timestamp)
@@ -88,11 +88,21 @@ The macro investment agent platform is organized into modular layers that clearl
 - `RunSignalEngineRequest`: Trigger signal evaluation
 - `RunSignalEngineResponse`: Return generated signals with metadata
 
+**Tool Handlers** (`mcp/tools/`):
+- `handle_get_macro_features`: Resolves `GetMacroFeaturesRequest` → `MacroService.fetch_features()`
+- `handle_get_macro_snapshot`: Resolves `GetMacroSnapshotRequest` → `MacroService.get_snapshot()`
+- `handle_run_signal_engine`: Resolves `RunSignalEngineRequest` → registry lookup → `MacroService.get_snapshot()` → `SignalService.run_engine()`
+
+**Signal Registry** (`domain/signals/registry.py`):
+- `SignalRegistry`: In-memory mapping of signal_id → SignalDefinition
+- `default_registry`: Pre-populated with built-in signal definitions
+
 **Characteristics**:
 - Immutable request/response objects
 - Validation at boundaries
 - Tracing via request_id
 - Status and error reporting
+- Tool handlers never raise — all errors become structured responses
 
 ## Data Flow
 
@@ -169,13 +179,17 @@ MCP Response (RunSignalEngineResponse)
 
 ### What Lives in MCP Layer
 ✅ Request/response schemas  
-✅ HTTP boundary validation  
+✅ Tool handler functions (thin dispatch to service layer)  
+✅ Input validation at the MCP boundary  
+✅ Structured error responses  
 ✅ Tracing and error reporting  
 
 ### What Does NOT Live in MCP Layer
 ❌ Business logic  
 ❌ Data transformation  
 ❌ Complex validation (defer to domain)  
+❌ State mutation or side effects  
+❌ FastAPI routes or HTTP endpoints  
 
 ## Future Extensibility
 
