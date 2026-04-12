@@ -27,13 +27,13 @@ _BUILT_IN_SIGNALS: dict[str, SignalDefinition] = {
         rules=[
             SignalRule(
                 name="gdp_growth_positive",
-                description="GDP growth should be above 2 %",
+                description="GDP growth should be above 2%",
                 condition="gdp > 2.0",
                 weight=1.5,
             ),
             SignalRule(
                 name="inflation_contained",
-                description="Inflation should be below 4 %",
+                description="Inflation should be below 4%",
                 condition="inflation < 4.0",
                 weight=1.0,
             ),
@@ -51,7 +51,7 @@ _BUILT_IN_SIGNALS: dict[str, SignalDefinition] = {
         rules=[
             SignalRule(
                 name="unemployment_elevated",
-                description="Unemployment rate exceeds 7 %",
+                description="Unemployment rate exceeds 7%",
                 condition="unemployment > 7.0",
                 weight=1.0,
             ),
