@@ -110,9 +110,10 @@ class SignalRegistry:
             definitions: Optional mapping of signal_id → SignalDefinition.
                          Pass ``None`` to use :data:`_BUILT_IN_SIGNALS`.
         """
-        self._definitions: dict[str, SignalDefinition] = (
-            definitions if definitions is not None else dict(_BUILT_IN_SIGNALS)
-        )
+        source = definitions if definitions is not None else _BUILT_IN_SIGNALS
+        self._definitions: dict[str, SignalDefinition] = {
+            sid: defn.model_copy(deep=True) for sid, defn in source.items()
+        }
 
     # ------------------------------------------------------------------
     # Public interface
