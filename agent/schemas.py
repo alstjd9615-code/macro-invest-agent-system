@@ -48,6 +48,7 @@ class SignalReviewRequest(AgentRequest):
 
     signal_ids: list[str] = Field(
         ...,
+        min_length=1,
         description="Signal definition IDs to review (must be non-empty)",
     )
     country: str = Field(default="US", description="Country code (ISO 3166-1 alpha-2)")
