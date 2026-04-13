@@ -101,6 +101,7 @@ async def handle_get_macro_snapshot(
             request_id=request.request_id,
             success=False,
             error_message=f"Failed to fetch snapshot: {exc}",
+            snapshot_timestamp=None,
             features_count=0,
         )
 
