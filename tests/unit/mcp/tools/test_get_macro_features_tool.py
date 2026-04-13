@@ -97,7 +97,7 @@ class TestHandleGetMacroFeatures:
         response = await handle_get_macro_features(request, mock_service)
 
         assert response.success is False
-        assert response.error_message is not None
+        assert response.error_message == "Failed to fetch macro features."
         assert response.features_count == 0
 
     async def test_non_us_country_accepted(self) -> None:
@@ -152,7 +152,7 @@ class TestHandleGetMacroSnapshot:
         response = await handle_get_macro_snapshot(request, mock_service)
 
         assert response.success is False
-        assert response.error_message is not None
+        assert response.error_message == "Failed to fetch macro snapshot."
         assert response.features_count == 0
 
     async def test_non_us_country(self) -> None:

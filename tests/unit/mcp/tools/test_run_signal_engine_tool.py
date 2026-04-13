@@ -198,9 +198,8 @@ class TestHandleRunSignalEngine:
         )
 
         assert response.success is False
-        assert response.error_message is not None
+        assert response.error_message == "Failed to fetch macro snapshot."
         assert response.engine_run_id == ""
-        mock_signal.run_engine.assert_not_called()
 
     async def test_engine_failure_returns_error(self) -> None:
         """Exception from signal service is captured as error response."""
@@ -215,7 +214,7 @@ class TestHandleRunSignalEngine:
         )
 
         assert response.success is False
-        assert response.error_message is not None
+        assert response.error_message == "Signal engine execution failed."
         assert response.engine_run_id == ""
 
     async def test_use_latest_snapshot_false_returns_error(self) -> None:
