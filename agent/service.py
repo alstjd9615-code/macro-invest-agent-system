@@ -14,6 +14,9 @@ Design principles
 * **Error-safe**: :class:`~agent.mcp_adapter.MCPToolError` from the adapter
   is caught and converted into a failed agent response so callers never
   receive uncaught exceptions.
+* **Separated concerns**: summary and error formatting are delegated to
+  :mod:`agent.formatting.summaries` and :mod:`agent.formatting.errors`
+  respectively so each concern can be tested and evolved independently.
 
 Usage example::
 
@@ -34,6 +37,8 @@ from __future__ import annotations
 
 import logging
 
+from agent.formatting.errors import format_signal_review_error, format_snapshot_summary_error
+from agent.formatting.summaries import format_signal_review_summary, format_snapshot_summary
 from agent.mcp_adapter import MCPAdapter, MCPToolError
 from agent.schemas import (
     MacroSnapshotSummaryRequest,
@@ -42,85 +47,9 @@ from agent.schemas import (
     SignalReviewResponse,
 )
 from domain.signals.registry import SignalRegistry
-from mcp.schemas.get_macro_features import GetMacroSnapshotResponse
-from mcp.schemas.run_signal_engine import RunSignalEngineResponse
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
 
 _log = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers: deterministic summary formatters
-# ---------------------------------------------------------------------------
-
-
-def _format_signal_review_summary(
-    response: RunSignalEngineResponse,
-    signal_ids: list[str],
-    country: str,
-) -> str:
-    """Build a deterministic one-paragraph signal review summary.
-
-    Args:
-        response: Successful MCP response from the signal engine.
-        signal_ids: IDs that were reviewed.
-        country: Country code used for the macro snapshot.
-
-    Returns:
-        A concise summary string describing the signal review outcome.
-    """
-    ids_str = ", ".join(signal_ids)
-    dominance = _dominant_signal_type(response)
-    return (
-        f"Signal review for [{ids_str}] (country={country}): "
-        f"{response.signals_generated} signal(s) generated "
-        f"(BUY={response.buy_signals}, SELL={response.sell_signals}, "
-        f"HOLD={response.hold_signals}). "
-        f"Dominant signal direction: {dominance}. "
-        f"Engine run ID: {response.engine_run_id}. "
-        f"Execution time: {response.execution_time_ms:.1f}ms."
-    )
-
-
-def _dominant_signal_type(response: RunSignalEngineResponse) -> str:
-    """Return the dominant signal type label based on counts.
-
-    Returns the type with the highest count, breaking ties in the order
-    BUY > SELL > HOLD.  Returns ``"none"`` if no signals were generated.
-    """
-    counts = {
-        "BUY": response.buy_signals,
-        "SELL": response.sell_signals,
-        "HOLD": response.hold_signals,
-    }
-    if not any(counts.values()):
-        return "none"
-    return max(counts, key=lambda k: counts[k])
-
-
-def _format_snapshot_summary(
-    response: GetMacroSnapshotResponse,
-    country: str,
-) -> str:
-    """Build a deterministic one-paragraph macro snapshot summary.
-
-    Args:
-        response: Successful MCP response from the snapshot tool.
-        country: Country code for which the snapshot was fetched.
-
-    Returns:
-        A concise summary string describing the snapshot.
-    """
-    ts_str = (
-        response.snapshot_timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if response.snapshot_timestamp is not None
-        else "unknown"
-    )
-    return (
-        f"Macro snapshot for country={country}: "
-        f"{response.features_count} feature(s) available "
-        f"as of {ts_str}."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -186,10 +115,13 @@ class AgentService:
             return SignalReviewResponse(
                 request_id=request.request_id,
                 success=False,
-                error_message=str(exc),
+                error_message=format_signal_review_error(
+                    raw_error=exc.error_message,
+                    request_id=request.request_id,
+                ),
             )
 
-        summary = _format_signal_review_summary(
+        summary = format_signal_review_summary(
             engine_response, request.signal_ids, request.country
         )
         return SignalReviewResponse(
@@ -236,11 +168,15 @@ class AgentService:
             return MacroSnapshotSummaryResponse(
                 request_id=request.request_id,
                 success=False,
-                error_message=str(exc),
+                error_message=format_snapshot_summary_error(
+                    raw_error=exc.error_message,
+                    request_id=request.request_id,
+                    country=request.country,
+                ),
                 country=request.country,
             )
 
-        summary = _format_snapshot_summary(snapshot_response, request.country)
+        summary = format_snapshot_summary(snapshot_response, request.country)
         return MacroSnapshotSummaryResponse(
             request_id=request.request_id,
             success=True,

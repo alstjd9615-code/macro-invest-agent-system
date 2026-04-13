@@ -15,13 +15,15 @@ Design notes
 * Error responses set ``success=False`` and populate ``error_message``;
   all numeric / datetime fields fall back to their ``default`` values so
   that schema validation still passes on the error path.
+* Field validators enforce non-negative signal counts and execution time so
+  downstream consumers never need to guard against negative values.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Request schemas
@@ -29,12 +31,18 @@ from pydantic import BaseModel, Field
 
 
 class AgentRequest(BaseModel):
-    """Base class for all agent requests."""
+    """Base class for all agent requests.
 
-    request_id: str = Field(..., description="Unique request identifier for tracing")
+    Attributes:
+        request_id: Unique identifier for this request, used for tracing
+            across the MCP and service layers.
+        timestamp: UTC timestamp at which the request was created.
+    """
+
+    request_id: str = Field(..., min_length=1, description="Unique request identifier for tracing")
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        description="Request creation timestamp",
+        description="Request creation timestamp (UTC)",
     )
 
 
@@ -44,6 +52,10 @@ class SignalReviewRequest(AgentRequest):
     The agent resolves each signal ID against the registry, runs the signal
     engine against the current macro snapshot, and returns a schema-validated
     summary.
+
+    Attributes:
+        signal_ids: Non-empty list of signal definition IDs to review.
+        country: ISO 3166-1 alpha-2 country code (default ``"US"``).
     """
 
     signal_ids: list[str] = Field(
@@ -53,12 +65,24 @@ class SignalReviewRequest(AgentRequest):
     )
     country: str = Field(default="US", description="Country code (ISO 3166-1 alpha-2)")
 
+    @field_validator("signal_ids")
+    @classmethod
+    def signal_ids_must_be_non_empty_strings(cls, v: list[str]) -> list[str]:
+        """Ensure every signal ID is a non-empty, stripped string."""
+        for idx, sid in enumerate(v):
+            if not sid or not sid.strip():
+                raise ValueError(f"signal_ids[{idx}] must be a non-empty string")
+        return v
+
 
 class MacroSnapshotSummaryRequest(AgentRequest):
     """Request a deterministic summary of the current macro snapshot.
 
     The agent fetches the latest macro snapshot for the given country and
     formats the result into a schema-validated summary.
+
+    Attributes:
+        country: ISO 3166-1 alpha-2 country code (default ``"US"``).
     """
 
     country: str = Field(default="US", description="Country code (ISO 3166-1 alpha-2)")
@@ -70,22 +94,41 @@ class MacroSnapshotSummaryRequest(AgentRequest):
 
 
 class AgentResponse(BaseModel, extra="forbid"):
-    """Base class for all agent responses."""
+    """Base class for all agent responses.
+
+    On success, ``success=True`` and ``summary`` is populated.
+    On failure, ``success=False`` and ``error_message`` is populated;
+    ``summary`` defaults to ``""`` so schema validation always passes.
+
+    Attributes:
+        request_id: Echo of the originating request ID for tracing.
+        timestamp: UTC timestamp at which the response was created.
+        success: ``True`` iff the agent operation completed without error.
+        error_message: Human-readable error description; ``None`` on success.
+        summary: Deterministic human-readable summary; ``""`` on failure.
+    """
 
     request_id: str = Field(..., description="Echo of the request ID that triggered this response")
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        description="Response creation timestamp",
+        description="Response creation timestamp (UTC)",
     )
     success: bool = Field(default=True, description="Whether the agent operation succeeded")
     error_message: str | None = Field(
         default=None,
-        description="Error message if success is False",
+        description="Error message if success is False; None on success",
     )
     summary: str = Field(
         default="",
-        description="Deterministic human-readable summary of the agent output",
+        description="Deterministic human-readable summary of the agent output; empty on failure",
     )
+
+    @model_validator(mode="after")
+    def error_message_present_on_failure(self) -> AgentResponse:
+        """Verify that failed responses carry an error message."""
+        if not self.success and not self.error_message:
+            raise ValueError("error_message must be set when success is False")
+        return self
 
 
 class SignalReviewResponse(AgentResponse):
@@ -93,18 +136,31 @@ class SignalReviewResponse(AgentResponse):
 
     Carries the engine metadata forwarded from the MCP layer alongside the
     agent-generated ``summary``.
+
+    Attributes:
+        engine_run_id: Unique ID of the signal engine run; empty on error.
+        signals_generated: Total number of signals produced (>= 0).
+        buy_signals: Count of BUY signals (>= 0).
+        sell_signals: Count of SELL signals (>= 0).
+        hold_signals: Count of HOLD signals (>= 0).
+        execution_time_ms: Engine wall-clock time in milliseconds (>= 0.0).
     """
 
     engine_run_id: str = Field(
         default="",
         description="Unique ID of the signal engine run (empty on error)",
     )
-    signals_generated: int = Field(default=0, description="Total number of signals produced")
-    buy_signals: int = Field(default=0, description="Count of BUY signals")
-    sell_signals: int = Field(default=0, description="Count of SELL signals")
-    hold_signals: int = Field(default=0, description="Count of HOLD signals")
+    signals_generated: int = Field(
+        default=0,
+        ge=0,
+        description="Total number of signals produced",
+    )
+    buy_signals: int = Field(default=0, ge=0, description="Count of BUY signals")
+    sell_signals: int = Field(default=0, ge=0, description="Count of SELL signals")
+    hold_signals: int = Field(default=0, ge=0, description="Count of HOLD signals")
     execution_time_ms: float = Field(
         default=0.0,
+        ge=0.0,
         description="Signal engine wall-clock time in milliseconds",
     )
 
@@ -114,14 +170,20 @@ class MacroSnapshotSummaryResponse(AgentResponse):
 
     Carries snapshot metadata forwarded from the MCP layer alongside the
     agent-generated ``summary``.
+
+    Attributes:
+        country: Country code for which the snapshot was fetched.
+        snapshot_timestamp: Reference time of the macro snapshot; ``None`` on error.
+        features_count: Number of macro features in the snapshot (>= 0).
     """
 
     country: str = Field(default="", description="Country code for which the snapshot was fetched")
     snapshot_timestamp: datetime | None = Field(
         default=None,
-        description="Reference time of the macro snapshot; None on error",
+        description="Reference time of the macro snapshot (UTC); None on error",
     )
     features_count: int = Field(
         default=0,
+        ge=0,
         description="Number of macro features present in the snapshot",
     )
