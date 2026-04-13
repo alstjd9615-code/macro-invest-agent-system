@@ -43,9 +43,9 @@ class GetMacroSnapshotResponse(MCPResponse):
     Contains all available macro features at the requested time.
     """
 
-    snapshot_timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="Time of the macro snapshot",
+    snapshot_timestamp: datetime | None = Field(
+        default=None,
+        description="Time of the macro snapshot; None on error",
     )
     features_count: int = Field(default=0, description="Number of features in snapshot")
     # Note: actual snapshot data would be nested; implementation would populate
