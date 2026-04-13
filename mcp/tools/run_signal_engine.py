@@ -21,12 +21,16 @@ Callable boundary contract
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import time
 
 from domain.signals.enums import SignalType
 from domain.signals.registry import SignalRegistry, default_registry
 from mcp.schemas.run_signal_engine import RunSignalEngineRequest, RunSignalEngineResponse
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
+
+_log = logging.getLogger(__name__)
 
 # Sentinel returned in error responses where no run ID was generated.
 _NO_RUN_ID = ""
@@ -71,6 +75,21 @@ async def handle_run_signal_engine(
         )
 
     # ------------------------------------------------------------------
+    # 1b. Reject use_latest_snapshot=False until the alternate path is
+    #     implemented: always fetch a live snapshot for now.
+    # ------------------------------------------------------------------
+    if not request.use_latest_snapshot:
+        return RunSignalEngineResponse(
+            request_id=request.request_id,
+            engine_run_id=_NO_RUN_ID,
+            success=False,
+            error_message=(
+                "use_latest_snapshot=False is not yet supported; "
+                "only live snapshot fetching is available."
+            ),
+        )
+
+    # ------------------------------------------------------------------
     # 2. Resolve signal IDs → SignalDefinition objects.
     # ------------------------------------------------------------------
     signal_definitions = []
@@ -96,12 +115,18 @@ async def handle_run_signal_engine(
     # ------------------------------------------------------------------
     try:
         snapshot = await macro_service.get_snapshot(country=request.country)
-    except Exception as exc:  # noqa: BLE001
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001
+        _log.exception(
+            "Unexpected error fetching macro snapshot (request_id=%s)",
+            request.request_id,
+        )
         return RunSignalEngineResponse(
             request_id=request.request_id,
             engine_run_id=_NO_RUN_ID,
             success=False,
-            error_message=f"Failed to fetch macro snapshot: {exc}",
+            error_message="Failed to fetch macro snapshot.",
         )
 
     # ------------------------------------------------------------------
@@ -110,12 +135,18 @@ async def handle_run_signal_engine(
     start = time.perf_counter()
     try:
         result = await signal_service.run_engine(signal_definitions, snapshot)
-    except Exception as exc:  # noqa: BLE001
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001
+        _log.exception(
+            "Unexpected error running signal engine (request_id=%s)",
+            request.request_id,
+        )
         return RunSignalEngineResponse(
             request_id=request.request_id,
             engine_run_id=_NO_RUN_ID,
             success=False,
-            error_message=f"Signal engine execution failed: {exc}",
+            error_message="Signal engine execution failed.",
         )
     execution_ms = (time.perf_counter() - start) * 1000.0
 

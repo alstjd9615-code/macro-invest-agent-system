@@ -198,7 +198,7 @@ class TestHandleRunSignalEngine:
         )
 
         assert response.success is False
-        assert "FRED unavailable" in response.error_message  # type: ignore[operator]
+        assert response.error_message is not None
         assert response.engine_run_id == ""
         mock_signal.run_engine.assert_not_called()
 
@@ -215,5 +215,26 @@ class TestHandleRunSignalEngine:
         )
 
         assert response.success is False
-        assert "engine crashed" in response.error_message  # type: ignore[operator]
+        assert response.error_message is not None
         assert response.engine_run_id == ""
+
+    async def test_use_latest_snapshot_false_returns_error(self) -> None:
+        """use_latest_snapshot=False is rejected until the alternate path is implemented."""
+        mock_macro = AsyncMock(spec=MacroService)
+        mock_signal = AsyncMock(spec=SignalService)
+
+        response = await handle_run_signal_engine(
+            request=RunSignalEngineRequest(
+                request_id="req-no-snap",
+                signal_ids=["bull_market"],
+                use_latest_snapshot=False,
+            ),
+            macro_service=mock_macro,
+            signal_service=mock_signal,
+        )
+
+        assert response.success is False
+        assert response.engine_run_id == ""
+        assert "use_latest_snapshot=False" in (response.error_message or "")
+        mock_macro.get_snapshot.assert_not_called()
+        mock_signal.run_engine.assert_not_called()
