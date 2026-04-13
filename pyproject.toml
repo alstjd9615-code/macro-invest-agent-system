@@ -80,4 +80,4 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.hatch.build.targets.wheel]
-packages = ["apps", "core", "domain", "evals", "mcp", "pipelines"]
+packages = ["agent", "apps", "core", "domain", "evals", "mcp", "pipelines"]
