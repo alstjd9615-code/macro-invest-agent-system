@@ -130,15 +130,18 @@ rather than scattering `if not response.success` checks throughout.
 ## Error Handling
 
 Tool failures are surfaced as a `MCPToolError` by the adapter and converted to
-a failed `AgentResponse` by the service.  The caller **never receives an uncaught
+a failed `AgentResponse` by the service. The caller **never receives an uncaught
 exception** — every code path returns a schema-valid response object.
+The `error_message` field contains the surfaced MCP error text and may include
+the MCP tool name as a prefix (for example, `[run_signal_engine] ...`) when
+formatted by `AgentService`.
 
 | Failure scenario | `success` | `error_message` |
 |---|---|---|
-| Unknown signal ID | `False` | Forwarded MCP error message |
-| Macro snapshot unavailable | `False` | Forwarded MCP error message |
-| Signal engine failure | `False` | Forwarded MCP error message |
-| Empty `signal_ids` list | `False` | Forwarded MCP error message |
+| Unknown signal ID | `False` | Surfaced MCP error message (may be prefixed with tool name) |
+| Macro snapshot unavailable | `False` | Surfaced MCP error message (may be prefixed with tool name) |
+| Signal engine failure | `False` | Surfaced MCP error message (may be prefixed with tool name) |
+| Empty `signal_ids` list | `False` | Surfaced MCP error message (may be prefixed with tool name) |
 
 ---
 
