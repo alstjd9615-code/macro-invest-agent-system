@@ -387,9 +387,9 @@ class TestMCPAdapterErrorNormalisation:
         assert exc_info.value.tool_name == "run_signal_engine"
 
     async def test_mcp_tool_error_message_is_informative(self) -> None:
-        """The MCPToolError message carries tool name and original error."""
+        """The MCPToolError message carries the tool name and a normalized error message."""
         mock_macro = AsyncMock(spec=MacroService)
-        mock_macro.get_snapshot.side_effect = RuntimeError("timeout")
+        mock_macro.get_snapshot.side_effect = RuntimeError("downstream failure")
         adapter = MCPAdapter(macro_service=mock_macro, signal_service=SignalService())
 
         with pytest.raises(MCPToolError) as exc_info:
