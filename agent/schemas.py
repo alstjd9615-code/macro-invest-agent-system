@@ -19,7 +19,7 @@ Design notes
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,7 @@ class AgentRequest(BaseModel):
 
     request_id: str = Field(..., description="Unique request identifier for tracing")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Request creation timestamp",
     )
 
@@ -73,7 +73,7 @@ class AgentResponse(BaseModel, extra="forbid"):
 
     request_id: str = Field(..., description="Echo of the request ID that triggered this response")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Response creation timestamp",
     )
     success: bool = Field(default=True, description="Whether the agent operation succeeded")
