@@ -79,7 +79,12 @@ class InMemoryFeatureStore(FeatureStoreRepositoryContract):
         Returns:
             List of :class:`~pipelines.ingestion.models.FeatureSnapshot`
             instances in newest-first order.  May be empty.
+
+        Raises:
+            ValueError: If ``limit`` is less than 1.
         """
+        if limit < 1:
+            raise ValueError("limit must be >= 1")
         matching = [s for s in self._snapshots if s.country == country]
         return list(reversed(matching))[:limit]
 
