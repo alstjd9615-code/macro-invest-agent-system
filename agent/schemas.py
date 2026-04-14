@@ -69,10 +69,13 @@ class SignalReviewRequest(AgentRequest):
     @classmethod
     def signal_ids_must_be_non_empty_strings(cls, v: list[str]) -> list[str]:
         """Ensure every signal ID is a non-empty, stripped string."""
+        normalized_signal_ids: list[str] = []
         for idx, sid in enumerate(v):
-            if not sid or not sid.strip():
+            normalized_sid = sid.strip()
+            if not sid or not normalized_sid:
                 raise ValueError(f"signal_ids[{idx}] must be a non-empty string")
-        return v
+            normalized_signal_ids.append(normalized_sid)
+        return normalized_signal_ids
 
 
 class MacroSnapshotSummaryRequest(AgentRequest):
