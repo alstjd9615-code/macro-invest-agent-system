@@ -70,8 +70,8 @@ The unit of data produced and persisted by the ingestion service.
 | `features` | `list[MacroFeature]` | Non-empty list of macro features |
 | `features_count` | `int` | Derived from `len(features)` — always kept in sync |
 
-`FeatureSnapshot` is a Pydantic model with `extra="allow"` behaviour (default)
-and a `model_post_init` hook that keeps `features_count` in sync.
+`FeatureSnapshot` is a Pydantic model with a `model_post_init` hook that
+keeps `features_count` in sync.
 
 ---
 
