@@ -286,10 +286,14 @@ asyncio.run(main())
 Pass a `SignalRegistry` instance to `AgentService.__init__` to override the
 built-in signal definitions.  This is useful in tests and evaluation harnesses.
 
-### LangChain / LangGraph integration
+### LangChain / LangGraph integration (Phase 2)
 
-Subclass or replace `AgentRuntime` without touching `AgentService` or the MCP
-adapter.  See [`docs/agent_runtime.md`](agent_runtime.md) for details.
+Phase 2 adds `LangChainAgentRuntime` in `agent/runtime/langchain_runtime.py`.
+See [`docs/phase2_runtime.md`](phase2_runtime.md) for the full architecture.
+
+The LangChain runtime adds prompt templates, tool bindings, output validation,
+and optional conversation context while preserving all Phase 1 constraints.
+The original `AgentRuntime` remains available as a lightweight fallback.
 
 ---
 
