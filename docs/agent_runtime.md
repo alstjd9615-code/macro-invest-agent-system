@@ -122,10 +122,27 @@ asyncio.run(main())
 
 ## Future Extension (LangChain / LangGraph)
 
-`AgentRuntime` is the **recommended integration point** for introducing
-LangChain chains or LangGraph graphs.  Two patterns are supported:
+**Phase 2 is now available.**  See [`docs/phase2_runtime.md`](phase2_runtime.md)
+for the full architecture of the LangChain-wired runtime.
 
-### 1. Subclass and override `invoke`
+`LangChainAgentRuntime` (in `agent/runtime/langchain_runtime.py`) implements
+the same `invoke(request) → AgentRuntimeResult` interface and adds:
+
+* **Prompt templates** — LangChain `ChatPromptTemplate` objects for summary
+  formatting (ready for LLM use when a model is connected).
+* **Tool bindings** — MCP adapter methods wrapped as LangChain
+  `StructuredTool` objects.
+* **Output validation** — schema enforcement at the boundary via
+  `agent/runtime/output_validation.py`.
+* **Conversation context** (optional) — session-scoped, in-memory
+  recent-turn carryover.
+
+The original `AgentRuntime` remains available as a lightweight alternative
+that does not depend on LangChain.
+
+### Additional extension patterns
+
+#### Subclass and override `invoke`
 
 ```python
 from agent.runtime.agent_runtime import AgentRuntime, AgentRuntimeResult, AgentRequestInput
@@ -139,7 +156,7 @@ class LangChainAgentRuntime(AgentRuntime):
 
 This keeps `AgentService` and the MCP adapter completely unchanged.
 
-### 2. Replace `AgentRuntime` with a LangGraph graph
+#### Replace `AgentRuntime` with a LangGraph graph
 
 Implement the same `invoke(request) → AgentRuntimeResult` interface in a
 LangGraph node and swap the runtime instance.  `AgentService` and all

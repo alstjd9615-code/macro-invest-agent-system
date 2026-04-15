@@ -19,6 +19,7 @@ dependencies = [
     "prefect>=3.0.0",
     "streamlit>=1.37.0",
     "structlog>=24.1.0",
+    "langchain-core>=1.2.22",
 ]
 
 [project.optional-dependencies]
