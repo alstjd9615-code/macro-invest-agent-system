@@ -10,10 +10,10 @@ Architecture
 
     Caller
       │
-      │  AgentRequest
+      │  AgentRequest (optional session_id)
       ▼
     ┌──────────────────────────┐
-    │  LangChainAgentRuntime   │ ← prompt templates + validation
+    │  LangChainAgentRuntime   │ ← prompt templates + context + validation
     └───────────┬──────────────┘
                 │
                 ▼
@@ -37,16 +37,26 @@ Design constraints
 * **Schema-safe**: every output is validated at the boundary before return.
 * **Backward-compatible**: the runtime exposes the same ``invoke`` interface
   as :class:`~agent.runtime.agent_runtime.AgentRuntime`.
+* **Session-scoped context**: when a request carries a ``session_id`` the
+  runtime injects recent-turn context into the prompt and records the turn.
+  Context never overrides tool results.
+
+Backward compatibility
+----------------------
+:class:`~agent.context.models.ConversationTurn` and
+:class:`~agent.context.models.ConversationContext` were previously defined
+in this module.  They have moved to :mod:`agent.context.models` and are
+re-exported here so that any code importing them from this module continues
+to work without change.
 """
 
 from __future__ import annotations
 
 import logging
-from collections import deque
 from typing import Any
 
-from pydantic import BaseModel, Field
-
+from agent.context.models import AnalysisParameters, ConversationContext, ConversationTurn
+from agent.context.store import InMemoryContextStore
 from agent.formatting.summaries import dominant_signal_type
 from agent.mcp_adapter import MCPAdapter
 from agent.prompts.templates import render_signal_review_summary, render_snapshot_summary
@@ -66,60 +76,13 @@ from agent.service import AgentService
 
 _log = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# In-memory conversation context (optional stretch scope)
-# ---------------------------------------------------------------------------
-
 _DEFAULT_MAX_TURNS = 10
 
-
-class ConversationTurn(BaseModel, extra="forbid"):
-    """A single turn in the session-scoped conversation context.
-
-    Attributes:
-        request_type: The class name of the agent request.
-        request_snapshot: Serialised request data for reference.
-        response_summary: The ``summary`` field from the agent response.
-        success: Whether the operation succeeded.
-    """
-
-    request_type: str = Field(..., description="Agent request class name")
-    request_snapshot: dict[str, Any] = Field(..., description="Serialised request data")
-    response_summary: str = Field(default="", description="Summary from the agent response")
-    success: bool = Field(default=True, description="Whether the operation succeeded")
-
-
-class ConversationContext:
-    """Session-scoped, in-memory conversation context for recent-turn carryover.
-
-    Stores up to ``max_turns`` recent turns.  No database, no persistence
-    across process restarts, and no retrieval memory.
-
-    Args:
-        max_turns: Maximum number of turns to retain (FIFO eviction).
-    """
-
-    def __init__(self, max_turns: int = _DEFAULT_MAX_TURNS) -> None:
-        self._turns: deque[ConversationTurn] = deque(maxlen=max_turns)
-
-    def add_turn(self, turn: ConversationTurn) -> None:
-        """Append a turn; oldest turns are evicted when the limit is reached."""
-        self._turns.append(turn)
-
-    @property
-    def turns(self) -> list[ConversationTurn]:
-        """Return all stored turns in chronological order."""
-        return list(self._turns)
-
-    @property
-    def turn_count(self) -> int:
-        """Return the number of stored turns."""
-        return len(self._turns)
-
-    def clear(self) -> None:
-        """Remove all stored turns."""
-        self._turns.clear()
+__all__ = [
+    "ConversationContext",
+    "ConversationTurn",
+    "LangChainAgentRuntime",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -134,18 +97,28 @@ class LangChainAgentRuntime:
     uses LangChain prompt templates for summary formatting, and validates
     every output against the typed agent schemas before returning.
 
-    Optionally maintains a session-scoped :class:`ConversationContext` for
-    recent-turn carryover.  Context is in-memory only — it is not persisted
-    and does not survive process restarts.
+    Supports two context modes:
+
+    1. **Legacy single-context mode** (``enable_context=True``): maintains one
+       :class:`~agent.context.models.ConversationContext` per runtime instance.
+       Requests without a ``session_id`` use this shared context.
+    2. **Session-scoped mode**: when a request carries a non-empty
+       ``session_id``, that ID is used to look up (or create) an isolated
+       :class:`~agent.context.models.ConversationContext` in the internal
+       :class:`~agent.context.store.InMemoryContextStore`.  Sessions are
+       completely isolated — no context leaks between different IDs.
+
+    Context is in-memory only.  It is not persisted and does not survive
+    process restarts.  Context never overrides deterministic tool results.
 
     Args:
         service: The :class:`~agent.service.AgentService` instance.
         adapter: The :class:`~agent.mcp_adapter.MCPAdapter` instance used to
             create LangChain tool bindings.
         enable_context: When ``True``, maintain a per-instance conversation
-            context.  Defaults to ``False``.
-        max_context_turns: Maximum number of turns to retain when context is
-            enabled.
+            context for requests that carry no ``session_id``.  Defaults to
+            ``False``.
+        max_context_turns: Maximum number of turns to retain in any context.
     """
 
     def __init__(
@@ -158,12 +131,16 @@ class LangChainAgentRuntime:
     ) -> None:
         self._service = service
         self._adapter = adapter
+        self._max_context_turns = max_context_turns
+
+        # Legacy single-instance context (enable_context=True, no session_id).
         self._context: ConversationContext | None = (
             ConversationContext(max_turns=max_context_turns) if enable_context else None
         )
 
-        # Lazily import tool factories to avoid circular deps and keep the
-        # module importable even when tests don't exercise tool creation.
+        # Session-keyed store for requests that supply a session_id.
+        self._session_store = InMemoryContextStore()
+
         from agent.runtime.tools import (
             create_macro_snapshot_tool,
             create_signal_engine_tool,
@@ -185,7 +162,7 @@ class LangChainAgentRuntime:
 
     @property
     def context(self) -> ConversationContext | None:
-        """The conversation context, or ``None`` if context is disabled."""
+        """The legacy per-instance context, or ``None`` if disabled."""
         return self._context
 
     # ------------------------------------------------------------------
@@ -197,10 +174,15 @@ class LangChainAgentRuntime:
 
         Pipeline steps:
 
-        1. Delegate to ``AgentService`` for deterministic tool execution.
-        2. Re-format the ``summary`` field using the LangChain prompt template.
-        3. Validate the complete result against the output schema.
-        4. (Optional) Record the turn in the conversation context.
+        1. Resolve the active :class:`~agent.context.models.ConversationContext`
+           for this request (session-keyed or legacy per-instance).
+        2. Build a context summary hint for prompt injection (empty when no
+           context has been established yet).
+        3. Delegate to ``AgentService`` for deterministic tool execution.
+        4. Re-format the ``summary`` field using the LangChain prompt template
+           with the context hint injected into the system message.
+        5. Validate the complete result against the output schema.
+        6. Record the turn in the active context.
 
         Args:
             request: A validated agent request.
@@ -212,31 +194,54 @@ class LangChainAgentRuntime:
             TypeError: If an unsupported request type is passed.
             OutputValidationError: If the output fails schema validation.
         """
+        active_ctx = self._resolve_context(request)
+        context_hint = active_ctx.context_summary() if active_ctx is not None else ""
+
         if isinstance(request, SignalReviewRequest):
-            result = await self._invoke_review_signals(request)
+            result = await self._invoke_review_signals(request, context_hint)
         elif isinstance(request, MacroSnapshotSummaryRequest):
-            result = await self._invoke_summarize_snapshot(request)
+            result = await self._invoke_summarize_snapshot(request, context_hint)
         else:
             raise TypeError(
                 f"Unsupported request type: {type(request).__name__}. "
                 f"Expected SignalReviewRequest or MacroSnapshotSummaryRequest."
             )
 
-        # Validate at the boundary.
         validate_runtime_result(result)
 
-        # Record turn in context if enabled.
-        if self._context is not None:
-            self._context.add_turn(
+        if active_ctx is not None:
+            params = _extract_parameters(request)
+            active_ctx.add_turn(
                 ConversationTurn(
                     request_type=type(request).__name__,
                     request_snapshot=request.model_dump(mode="json"),
                     response_summary=result.response.summary,
                     success=result.success,
+                    active_parameters=params,
                 )
             )
 
         return result
+
+    # ------------------------------------------------------------------
+    # Context resolution
+    # ------------------------------------------------------------------
+
+    def _resolve_context(self, request: AgentRequestInput) -> ConversationContext | None:
+        """Return the active context for *request*, or ``None``.
+
+        Resolution order:
+        1. If the request has a non-empty ``session_id``, use (or create)
+           the session-keyed context in the internal store.
+        2. Otherwise fall back to the per-instance context (may be ``None``
+           when ``enable_context=False``).
+        """
+        session_id = getattr(request, "session_id", None)
+        if session_id:
+            return self._session_store.get_or_create(
+                session_id, max_turns=self._max_context_turns
+            )
+        return self._context
 
     # ------------------------------------------------------------------
     # Private dispatchers
@@ -245,19 +250,15 @@ class LangChainAgentRuntime:
     async def _invoke_review_signals(
         self,
         request: SignalReviewRequest,
+        context_hint: str,
     ) -> AgentRuntimeResult:
         _log.debug(
             "LangChainAgentRuntime: dispatching review_signals (request_id=%s)",
             request.request_id,
         )
-
-        # Step 1 — call the service (MCP boundary preserved).
         response = await self._service.review_signals(request)
-
-        # Step 2 — re-format summary using the prompt template (success only).
         if response.success:
-            response = self._reformat_signal_review(response, request)
-
+            response = self._reformat_signal_review(response, request, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.REVIEW_SIGNALS,
             response=response,  # type: ignore[arg-type]
@@ -266,17 +267,15 @@ class LangChainAgentRuntime:
     async def _invoke_summarize_snapshot(
         self,
         request: MacroSnapshotSummaryRequest,
+        context_hint: str,
     ) -> AgentRuntimeResult:
         _log.debug(
             "LangChainAgentRuntime: dispatching summarize_macro_snapshot (request_id=%s)",
             request.request_id,
         )
-
         response = await self._service.summarize_macro_snapshot(request)
-
         if response.success:
-            response = self._reformat_snapshot_summary(response)
-
+            response = self._reformat_snapshot_summary(response, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.SUMMARIZE_MACRO_SNAPSHOT,
             response=response,  # type: ignore[arg-type]
@@ -290,15 +289,16 @@ class LangChainAgentRuntime:
     def _reformat_signal_review(
         response: SignalReviewResponse,
         request: SignalReviewRequest,
+        context_hint: str = "",
     ) -> SignalReviewResponse:
         """Re-render the summary using the LangChain prompt template.
 
-        All numeric / metadata fields are preserved from the original response;
-        only the ``summary`` string is regenerated.
+        All numeric / metadata fields are preserved; only ``summary`` is
+        regenerated.  *context_hint* is appended to the system message when
+        non-empty but never overrides the deterministic tool results.
         """
         from mcp.schemas.run_signal_engine import RunSignalEngineResponse
 
-        # Build a lightweight MCP-response-like object to compute dominance.
         engine_like = RunSignalEngineResponse(
             request_id=response.request_id,
             success=True,
@@ -321,6 +321,7 @@ class LangChainAgentRuntime:
             dominant_direction=dominance,
             engine_run_id=response.engine_run_id,
             execution_time_ms=f"{response.execution_time_ms:.1f}",
+            context_summary=context_hint,
         )
 
         return SignalReviewResponse(
@@ -339,6 +340,7 @@ class LangChainAgentRuntime:
     @staticmethod
     def _reformat_snapshot_summary(
         response: MacroSnapshotSummaryResponse,
+        context_hint: str = "",
     ) -> MacroSnapshotSummaryResponse:
         """Re-render the summary using the LangChain prompt template."""
         ts_str = (
@@ -346,13 +348,12 @@ class LangChainAgentRuntime:
             if response.snapshot_timestamp is not None
             else "unknown"
         )
-
         new_summary = render_snapshot_summary(
             country=response.country,
             features_count=response.features_count,
             snapshot_timestamp=ts_str,
+            context_summary=context_hint,
         )
-
         return MacroSnapshotSummaryResponse(
             request_id=response.request_id,
             timestamp=response.timestamp,
@@ -362,3 +363,19 @@ class LangChainAgentRuntime:
             snapshot_timestamp=response.snapshot_timestamp,
             features_count=response.features_count,
         )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_parameters(request: AgentRequestInput) -> AnalysisParameters:
+    """Extract :class:`~agent.context.models.AnalysisParameters` from a request.
+
+    Reads ``country`` from the request if present.  Other parameters are not
+    yet extractable from request objects in Phase 3 and default to ``None``.
+    """
+    country: str | None = getattr(request, "country", None)
+    return AnalysisParameters(country=country)
+

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MCPRequest(BaseModel):
@@ -12,21 +12,20 @@ class MCPRequest(BaseModel):
     and metadata for operations on macro data and signals.
     """
 
-    request_id: str = Field(..., description="Unique request identifier for tracing")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="Request creation timestamp",
-    )
-
-    class Config:
-        """Pydantic config for base request."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "request_id": "req-12345",
                 "timestamp": "2026-04-11T12:00:00Z",
             }
         }
+    )
+
+    request_id: str = Field(..., description="Unique request identifier for tracing")
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Request creation timestamp",
+    )
 
 
 class MCPResponse(BaseModel, extra="forbid"):
@@ -34,6 +33,17 @@ class MCPResponse(BaseModel, extra="forbid"):
 
     MCP responses contain the result data and metadata for completed operations.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "request_id": "req-12345",
+                "timestamp": "2026-04-11T12:00:00Z",
+                "success": True,
+                "error_message": None,
+            }
+        }
+    )
 
     request_id: str = Field(..., description="Echo of the request ID that triggered this response")
     timestamp: datetime = Field(
@@ -45,15 +55,3 @@ class MCPResponse(BaseModel, extra="forbid"):
         default=None,
         description="Error message if success is False",
     )
-
-    class Config:
-        """Pydantic config for base response."""
-
-        json_schema_extra = {
-            "example": {
-                "request_id": "req-12345",
-                "timestamp": "2026-04-11T12:00:00Z",
-                "success": True,
-                "error_message": None,
-            }
-        }
