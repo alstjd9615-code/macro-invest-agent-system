@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from core.contracts.macro_data_source import MacroDataSourceContract
+from core.contracts.macro_data_source import MacroDataSourceContract, SourceMetadata
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature
 
@@ -59,6 +59,15 @@ class FixtureMacroDataSource(MacroDataSourceContract):
     def source_id(self) -> str:
         """Stable identifier for this adapter."""
         return "fixture"
+
+    @property
+    def metadata(self) -> SourceMetadata:
+        """Source metadata for SourceRegistry selection."""
+        return SourceMetadata(
+            source_id="fixture",
+            priority=5,
+            supported_indicators=frozenset(i.value for i in _FIXTURE_VALUES),
+        )
 
     async def fetch_raw(
         self,

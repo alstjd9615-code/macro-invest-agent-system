@@ -25,13 +25,41 @@ Concrete adapters MUST raise typed exceptions from
 This allows callers to distinguish failure categories without parsing message
 strings.  Using ``RuntimeError`` directly is deprecated and will be removed in
 a future release.
+
+Multi-provider readiness
+------------------------
+Adapters that want to participate in source selection should implement the
+optional :attr:`metadata` property, returning a :class:`SourceMetadata`
+instance.  :class:`~adapters.sources.source_registry.SourceRegistry` uses
+this metadata to select the highest-priority source for a given indicator.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 from domain.macro.models import MacroFeature
+
+
+@dataclass(frozen=True)
+class SourceMetadata:
+    """Metadata describing a data source for source-selection purposes.
+
+    Attributes:
+        source_id: Short, unique identifier (matches
+            :attr:`MacroDataSourceContract.source_id`).
+        priority: Integer priority used by
+            :class:`~adapters.sources.source_registry.SourceRegistry` for
+            source selection.  Higher numbers win; e.g. ``10 > 5``.
+        supported_indicators: Frozenset of
+            :class:`~domain.macro.enums.MacroIndicatorType` string values that
+            this source can supply.
+    """
+
+    source_id: str
+    priority: int
+    supported_indicators: frozenset[str] = field(default_factory=frozenset)
 
 
 class MacroDataSourceContract(ABC):
@@ -49,6 +77,17 @@ class MacroDataSourceContract(ABC):
     @abstractmethod
     def source_id(self) -> str:
         """Short, unique identifier for this data source."""
+
+    @property
+    def metadata(self) -> SourceMetadata | None:
+        """Optional source metadata for multi-provider source selection.
+
+        Implement this property to participate in
+        :class:`~adapters.sources.source_registry.SourceRegistry` routing.
+        When ``None`` (the default), the source cannot be discovered via the
+        registry.
+        """
+        return None
 
     @abstractmethod
     async def fetch_raw(

@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 
 from adapters.sources.fred.normalizer import normalize_fred_observation
 from adapters.sources.fred.series_map import FRED_SERIES_MAP
-from core.contracts.macro_data_source import MacroDataSourceContract
+from core.contracts.macro_data_source import MacroDataSourceContract, SourceMetadata
 from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
 from domain.macro.enums import MacroIndicatorType
 from domain.macro.models import MacroFeature
@@ -74,6 +74,19 @@ class FredMacroDataSource(MacroDataSourceContract):
     def source_id(self) -> str:
         """Stable identifier for this adapter."""
         return "fred"
+
+    @property
+    def metadata(self) -> SourceMetadata:
+        """Source metadata for SourceRegistry selection.
+
+        Reports all indicators available in :data:`~adapters.sources.fred.series_map.FRED_SERIES_MAP`.
+        The API key is not exposed here.
+        """
+        return SourceMetadata(
+            source_id="fred",
+            priority=10,
+            supported_indicators=frozenset(i.value for i in FRED_SERIES_MAP),
+        )
 
     async def fetch_raw(
         self,

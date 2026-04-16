@@ -17,7 +17,7 @@ Design notes
 
 from __future__ import annotations
 
-from core.contracts.macro_data_source import MacroDataSourceContract
+from core.contracts.macro_data_source import MacroDataSourceContract, SourceMetadata
 from domain.macro.models import MacroFeature
 
 
@@ -48,6 +48,16 @@ class InMemoryMacroDataSource(MacroDataSourceContract):
     def source_id(self) -> str:
         """Stable identifier for this adapter."""
         return "in_memory"
+
+    @property
+    def metadata(self) -> SourceMetadata:
+        """Source metadata: all currently stored indicators are supported."""
+        supported = frozenset(indicator for _, indicator in self._store)
+        return SourceMetadata(
+            source_id="in_memory",
+            priority=1,
+            supported_indicators=supported,
+        )
 
     def set_feature(self, country: str, indicator: str, feature: MacroFeature) -> None:
         """Store a feature for a given country and indicator.
