@@ -24,6 +24,8 @@ from __future__ import annotations
 import asyncio
 import time
 
+from core.exceptions.base import PartialDataError, ProviderError, StaleDataError
+from core.exceptions.failure_category import FailureCategory
 from domain.signals.enums import SignalType
 from domain.signals.registry import SignalRegistry, default_registry
 from mcp.schemas.run_signal_engine import RunSignalEngineRequest, RunSignalEngineResponse
@@ -32,6 +34,19 @@ from core.logging.logger import get_logger
 from core.logging.timing import timed_operation
 
 _log = get_logger(__name__)
+
+
+def _provider_error_to_category(exc: ProviderError) -> FailureCategory:
+    """Map a ProviderError subclass to the appropriate FailureCategory."""
+    from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
+
+    if isinstance(exc, ProviderTimeoutError):
+        return FailureCategory.PROVIDER_TIMEOUT
+    if isinstance(exc, ProviderHTTPError):
+        return FailureCategory.PROVIDER_HTTP
+    if isinstance(exc, ProviderNetworkError):
+        return FailureCategory.PROVIDER_NETWORK
+    return FailureCategory.UNKNOWN
 
 # Sentinel returned in error responses where no run ID was generated.
 _NO_RUN_ID = ""
@@ -118,6 +133,36 @@ async def handle_run_signal_engine(
     try:
         async with timed_operation("mcp_tool", "fetch_snapshot_for_engine", _log):
             snapshot = await macro_service.get_snapshot(country=request.country)
+    except ProviderError as exc:
+        category = _provider_error_to_category(exc)
+        _log.warning(
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            failure_category=category,
+        )
+        return RunSignalEngineResponse(
+            request_id=request.request_id,
+            engine_run_id=_NO_RUN_ID,
+            success=False,
+            error_message=str(exc),
+            failure_category=category,
+        )
+    except StaleDataError as exc:
+        _log.warning(
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            failure_category=FailureCategory.STALE_DATA,
+        )
+        return RunSignalEngineResponse(
+            request_id=request.request_id,
+            engine_run_id=_NO_RUN_ID,
+            success=False,
+            error_message=str(exc),
+            failure_category=FailureCategory.STALE_DATA,
+            is_degraded=True,
+        )
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
@@ -133,6 +178,7 @@ async def handle_run_signal_engine(
             engine_run_id=_NO_RUN_ID,
             success=False,
             error_message="Failed to fetch macro snapshot.",
+            failure_category=FailureCategory.UNKNOWN,
         )
 
     # ------------------------------------------------------------------
@@ -157,6 +203,7 @@ async def handle_run_signal_engine(
             engine_run_id=_NO_RUN_ID,
             success=False,
             error_message="Signal engine execution failed.",
+            failure_category=FailureCategory.UNKNOWN,
         )
     execution_ms = (time.perf_counter() - start) * 1000.0
 

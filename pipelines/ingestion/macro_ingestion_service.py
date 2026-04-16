@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from core.contracts.feature_store_repository import FeatureStoreRepositoryContract
 from core.contracts.macro_data_source import MacroDataSourceContract
+from core.exceptions.base import ProviderError
 from domain.macro.enums import MacroIndicatorType
 from pipelines.ingestion.models import FeatureSnapshot
 from core.logging.logger import get_logger
@@ -101,7 +102,19 @@ class MacroIngestionService:
             indicator_count=len(effective_indicators),
         )
 
-        raw_features = await self._source.fetch_raw(country=country, indicators=effective_indicators)
+        try:
+            raw_features = await self._source.fetch_raw(
+                country=country, indicators=effective_indicators
+            )
+        except ProviderError as exc:
+            _log.warning(
+                "ingestion_provider_error",
+                country=country,
+                source=self._source.source_id,
+                failure_category=exc.error_code,
+                error=str(exc),
+            )
+            raise
 
         if not raw_features:
             raise RuntimeError(

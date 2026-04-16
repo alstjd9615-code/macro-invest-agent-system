@@ -12,6 +12,19 @@ Design notes
 * All methods are **async** to support both synchronous stub adapters (via
   ``asyncio``-compatible returns) and future I/O-bound provider adapters.
 * The contract is **read-only** — no method modifies external state.
+
+Error contract
+--------------
+Concrete adapters MUST raise typed exceptions from
+:mod:`core.exceptions.base`, not bare ``RuntimeError``:
+
+* :class:`~core.exceptions.base.ProviderTimeoutError` — request timed out.
+* :class:`~core.exceptions.base.ProviderHTTPError` — non-2xx HTTP response.
+* :class:`~core.exceptions.base.ProviderNetworkError` — network I/O failure.
+
+This allows callers to distinguish failure categories without parsing message
+strings.  Using ``RuntimeError`` directly is deprecated and will be removed in
+a future release.
 """
 
 from __future__ import annotations
@@ -57,5 +70,8 @@ class MacroDataSourceContract(ABC):
             indicators.
 
         Raises:
-            RuntimeError: If the underlying data source is unavailable.
+            ProviderTimeoutError: If the upstream provider times out.
+            ProviderHTTPError: If the upstream provider returns a non-2xx
+                HTTP status.
+            ProviderNetworkError: On OS-level / network I/O failure.
         """

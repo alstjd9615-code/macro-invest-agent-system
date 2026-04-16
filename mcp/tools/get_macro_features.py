@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import asyncio
 
+from core.exceptions.base import PartialDataError, ProviderError, StaleDataError
+from core.exceptions.failure_category import FailureCategory
 from mcp.schemas.get_macro_features import (
     GetMacroFeaturesRequest,
     GetMacroFeaturesResponse,
@@ -28,6 +30,19 @@ from core.logging.logger import get_logger
 from core.logging.timing import timed_operation
 
 _log = get_logger(__name__)
+
+
+def _provider_error_to_category(exc: ProviderError) -> FailureCategory:
+    """Map a ProviderError subclass to the appropriate FailureCategory."""
+    from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
+
+    if isinstance(exc, ProviderTimeoutError):
+        return FailureCategory.PROVIDER_TIMEOUT
+    if isinstance(exc, ProviderHTTPError):
+        return FailureCategory.PROVIDER_HTTP
+    if isinstance(exc, ProviderNetworkError):
+        return FailureCategory.PROVIDER_NETWORK
+    return FailureCategory.UNKNOWN
 
 
 async def handle_get_macro_features(
@@ -71,6 +86,51 @@ async def handle_get_macro_features(
             error_message=str(exc),
             features_count=0,
         )
+    except ProviderError as exc:
+        category = _provider_error_to_category(exc)
+        _log.warning(
+            "mcp_tool_returned",
+            tool="get_macro_features",
+            success=False,
+            failure_category=category,
+        )
+        return GetMacroFeaturesResponse(
+            request_id=request.request_id,
+            success=False,
+            error_message=str(exc),
+            features_count=0,
+            failure_category=category,
+        )
+    except StaleDataError as exc:
+        _log.warning(
+            "mcp_tool_returned",
+            tool="get_macro_features",
+            success=False,
+            failure_category=FailureCategory.STALE_DATA,
+        )
+        return GetMacroFeaturesResponse(
+            request_id=request.request_id,
+            success=False,
+            error_message=str(exc),
+            features_count=0,
+            failure_category=FailureCategory.STALE_DATA,
+            is_degraded=True,
+        )
+    except PartialDataError as exc:
+        _log.warning(
+            "mcp_tool_returned",
+            tool="get_macro_features",
+            success=False,
+            failure_category=FailureCategory.PARTIAL_DATA,
+        )
+        return GetMacroFeaturesResponse(
+            request_id=request.request_id,
+            success=False,
+            error_message=str(exc),
+            features_count=exc.available_count,
+            failure_category=FailureCategory.PARTIAL_DATA,
+            is_degraded=True,
+        )
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
@@ -85,6 +145,7 @@ async def handle_get_macro_features(
             success=False,
             error_message="Failed to fetch macro features.",
             features_count=0,
+            failure_category=FailureCategory.UNKNOWN,
         )
 
     _log.debug(
@@ -121,6 +182,38 @@ async def handle_get_macro_snapshot(
     try:
         async with timed_operation("mcp_tool", "get_macro_snapshot", _log):
             snapshot = await service.get_snapshot(country=request.country)
+    except ProviderError as exc:
+        category = _provider_error_to_category(exc)
+        _log.warning(
+            "mcp_tool_returned",
+            tool="get_macro_snapshot",
+            success=False,
+            failure_category=category,
+        )
+        return GetMacroSnapshotResponse(
+            request_id=request.request_id,
+            success=False,
+            error_message=str(exc),
+            snapshot_timestamp=None,
+            features_count=0,
+            failure_category=category,
+        )
+    except StaleDataError as exc:
+        _log.warning(
+            "mcp_tool_returned",
+            tool="get_macro_snapshot",
+            success=False,
+            failure_category=FailureCategory.STALE_DATA,
+        )
+        return GetMacroSnapshotResponse(
+            request_id=request.request_id,
+            success=False,
+            error_message=str(exc),
+            snapshot_timestamp=None,
+            features_count=0,
+            failure_category=FailureCategory.STALE_DATA,
+            is_degraded=True,
+        )
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
@@ -136,6 +229,7 @@ async def handle_get_macro_snapshot(
             error_message="Failed to fetch macro snapshot.",
             snapshot_timestamp=None,
             features_count=0,
+            failure_category=FailureCategory.UNKNOWN,
         )
 
     _log.debug(

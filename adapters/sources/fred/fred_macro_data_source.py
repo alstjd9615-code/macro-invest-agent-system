@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from adapters.sources.fred.normalizer import normalize_fred_observation
 from adapters.sources.fred.series_map import FRED_SERIES_MAP
 from core.contracts.macro_data_source import MacroDataSourceContract
+from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
 from domain.macro.enums import MacroIndicatorType
 from domain.macro.models import MacroFeature
 from core.logging.logger import get_logger
@@ -195,9 +196,11 @@ class FredMacroDataSource(MacroDataSourceContract):
                 error="http_error",
                 http_status=exc.code,
             )
-            raise RuntimeError(
+            raise ProviderHTTPError(
                 f"FRED API HTTP error {exc.code} for series={series_id!r}: {exc.reason}. "
-                f"Verify your FRED_API_KEY and network access."
+                f"Verify your FRED_API_KEY and network access.",
+                provider_id="fred",
+                http_status=exc.code,
             ) from exc
         except TimeoutError as exc:
             _log.warning(
@@ -206,9 +209,11 @@ class FredMacroDataSource(MacroDataSourceContract):
                 error="timeout",
                 timeout_s=self._timeout_s,
             )
-            raise RuntimeError(
+            raise ProviderTimeoutError(
                 f"FRED API request timed out after {self._timeout_s}s for series={series_id!r}. "
-                f"Check your network connection or increase fred_request_timeout_s."
+                f"Check your network connection or increase fred_request_timeout_s.",
+                provider_id="fred",
+                timeout_s=self._timeout_s,
             ) from exc
         except OSError as exc:
             _log.warning(
@@ -216,9 +221,10 @@ class FredMacroDataSource(MacroDataSourceContract):
                 series_id=series_id,
                 error="network_error",
             )
-            raise RuntimeError(
+            raise ProviderNetworkError(
                 f"FRED API network error for series={series_id!r}: {exc}. "
-                f"Check your network connection."
+                f"Check your network connection.",
+                provider_id="fred",
             ) from exc
 
         observations = payload.get("observations", [])
