@@ -4,6 +4,9 @@ from domain.macro.models import MacroSnapshot
 from domain.signals.engine import SignalEngine
 from domain.signals.models import SignalDefinition, SignalResult
 from services.interfaces import SignalServiceInterface
+from core.logging.logger import get_logger
+
+_log = get_logger(__name__)
 
 
 class SignalService(SignalServiceInterface):
@@ -66,4 +69,15 @@ class SignalService(SignalServiceInterface):
         if not signal_definitions:
             raise ValueError("At least one signal definition is required")
 
-        return await self.engine.run(signal_definitions, snapshot)
+        _log.debug(
+            "service_fetch_started",
+            operation="run_engine",
+            signal_count=len(signal_definitions),
+        )
+        result = await self.engine.run(signal_definitions, snapshot)
+        _log.debug(
+            "service_fetch_complete",
+            operation="run_engine",
+            signals_generated=len(result.signals),
+        )
+        return result

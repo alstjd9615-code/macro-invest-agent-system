@@ -22,14 +22,14 @@ Design principles
 
 from __future__ import annotations
 
-import logging
-
 from core.contracts.feature_store_repository import FeatureStoreRepositoryContract
 from core.contracts.macro_data_source import MacroDataSourceContract
+from core.exceptions.base import ProviderError
 from domain.macro.enums import MacroIndicatorType
 from pipelines.ingestion.models import FeatureSnapshot
+from core.logging.logger import get_logger
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 # Default set of indicators fetched when the caller does not specify any.
 DEFAULT_INDICATORS: list[str] = [
@@ -96,13 +96,25 @@ class MacroIngestionService:
         """
         effective_indicators = indicators if indicators is not None else DEFAULT_INDICATORS
         _log.info(
-            "Ingestion started: country=%s source=%s indicators=%s",
-            country,
-            self._source.source_id,
-            effective_indicators,
+            "ingestion_started",
+            country=country,
+            source=self._source.source_id,
+            indicator_count=len(effective_indicators),
         )
 
-        raw_features = await self._source.fetch_raw(country=country, indicators=effective_indicators)
+        try:
+            raw_features = await self._source.fetch_raw(
+                country=country, indicators=effective_indicators
+            )
+        except ProviderError as exc:
+            _log.warning(
+                "ingestion_provider_error",
+                country=country,
+                source=self._source.source_id,
+                failure_category=exc.error_code,
+                error=str(exc),
+            )
+            raise
 
         if not raw_features:
             raise RuntimeError(
@@ -120,10 +132,10 @@ class MacroIngestionService:
         await self._repository.save_snapshot(snapshot)
 
         _log.info(
-            "Ingestion complete: country=%s features_count=%d snapshot_id=%s",
-            country,
-            snapshot.features_count,
-            snapshot.snapshot_id,
+            "ingestion_complete",
+            country=country,
+            features_count=snapshot.features_count,
+            snapshot_id=snapshot.snapshot_id,
         )
 
         return snapshot

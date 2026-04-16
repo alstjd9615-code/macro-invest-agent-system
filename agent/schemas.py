@@ -184,6 +184,20 @@ class AgentResponse(BaseModel, extra="forbid"):
         default="",
         description="Deterministic human-readable summary of the agent output; empty on failure",
     )
+    is_degraded: bool = Field(
+        default=False,
+        description=(
+            "True when data is partial or stale but the response is still schema-valid. "
+            "success may remain True for degraded-but-usable results."
+        ),
+    )
+    failure_category: str | None = Field(
+        default=None,
+        description=(
+            "Machine-readable failure category when success=False or is_degraded=True. "
+            "None on clean success."
+        ),
+    )
 
     @model_validator(mode="after")
     def error_message_present_on_failure(self) -> AgentResponse:

@@ -17,16 +17,16 @@ Callable boundary contract
 
 from __future__ import annotations
 
-import logging
-
 from domain.signals.registry import SignalRegistry, default_registry
 from mcp.schemas.get_macro_features import GetMacroSnapshotRequest, GetMacroSnapshotResponse
 from mcp.schemas.run_signal_engine import RunSignalEngineRequest, RunSignalEngineResponse
 from mcp.tools.get_macro_features import handle_get_macro_snapshot
 from mcp.tools.run_signal_engine import handle_run_signal_engine
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 class MCPToolError(Exception):
@@ -89,17 +89,20 @@ class MCPAdapter:
         Raises:
             MCPToolError: If the MCP tool returns ``success=False``.
         """
+        _log.debug("tool_called", tool="get_macro_snapshot", country=country)
         request = GetMacroSnapshotRequest(request_id=request_id, country=country)
-        response = await handle_get_macro_snapshot(request, self._macro_service)
+        async with timed_operation("mcp_adapter", "get_macro_snapshot", _log):
+            response = await handle_get_macro_snapshot(request, self._macro_service)
 
         if not response.success:
             _log.warning(
-                "MCP tool get_macro_snapshot failed (request_id=%s): %s",
-                request_id,
-                response.error_message,
+                "tool_failed",
+                tool="get_macro_snapshot",
+                error=response.error_message,
             )
             raise MCPToolError("get_macro_snapshot", response.error_message or "unknown error")
 
+        _log.debug("tool_done", tool="get_macro_snapshot", success=True)
         return response
 
     async def run_signal_engine(
@@ -122,24 +125,27 @@ class MCPAdapter:
         Raises:
             MCPToolError: If the MCP tool returns ``success=False``.
         """
+        _log.debug("tool_called", tool="run_signal_engine", country=country)
         request = RunSignalEngineRequest(
             request_id=request_id,
             signal_ids=signal_ids,
             country=country,
         )
-        response = await handle_run_signal_engine(
-            request=request,
-            macro_service=self._macro_service,
-            signal_service=self._signal_service,
-            registry=self._registry,
-        )
+        async with timed_operation("mcp_adapter", "run_signal_engine", _log):
+            response = await handle_run_signal_engine(
+                request=request,
+                macro_service=self._macro_service,
+                signal_service=self._signal_service,
+                registry=self._registry,
+            )
 
         if not response.success:
             _log.warning(
-                "MCP tool run_signal_engine failed (request_id=%s): %s",
-                request_id,
-                response.error_message,
+                "tool_failed",
+                tool="run_signal_engine",
+                error=response.error_message,
             )
             raise MCPToolError("run_signal_engine", response.error_message or "unknown error")
 
+        _log.debug("tool_done", tool="run_signal_engine", success=True)
         return response

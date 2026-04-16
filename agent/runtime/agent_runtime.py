@@ -23,7 +23,6 @@ Design constraints
 
 from __future__ import annotations
 
-import logging
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -38,8 +37,10 @@ from agent.schemas import (
     SnapshotComparisonResponse,
 )
 from agent.service import AgentService
+from core.logging.logger import bind_request_context, get_logger, set_trace_id
+from core.logging.timing import timed_operation
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Operation registry
@@ -151,6 +152,11 @@ class AgentRuntime:
         * :class:`~agent.schemas.SnapshotComparisonRequest` →
           ``compare_snapshots``
 
+        A fresh trace ID is generated for every ``invoke`` call (unless one
+        is already set).  The ``request_id`` and optional ``session_id`` are
+        bound into the structlog context so they appear on all downstream log
+        records for the same async task.
+
         Args:
             request: A validated agent request (
                 :class:`~agent.schemas.SignalReviewRequest`,
@@ -166,17 +172,34 @@ class AgentRuntime:
             TypeError: If an unsupported request type is passed.  Callers
                 should only pass the supported union types documented above.
         """
-        if isinstance(request, SignalReviewRequest):
-            return await self._invoke_review_signals(request)
-        if isinstance(request, MacroSnapshotSummaryRequest):
-            return await self._invoke_summarize_snapshot(request)
-        if isinstance(request, SnapshotComparisonRequest):
-            return await self._invoke_compare_snapshots(request)
-        raise TypeError(
-            f"Unsupported request type: {type(request).__name__}. "
-            f"Expected SignalReviewRequest, MacroSnapshotSummaryRequest, "
-            f"or SnapshotComparisonRequest."
+        # Validate request type before accessing its attributes.
+        if not isinstance(request, (SignalReviewRequest, MacroSnapshotSummaryRequest, SnapshotComparisonRequest)):
+            raise TypeError(
+                f"Unsupported request type: {type(request).__name__}. "
+                f"Expected SignalReviewRequest, MacroSnapshotSummaryRequest, "
+                f"or SnapshotComparisonRequest."
+            )
+
+        bind_request_context(
+            request_id=request.request_id,
+            trace_id=set_trace_id(),
+            session_id=getattr(request, "session_id", None),
         )
+        _log.info("request_started", request_type=type(request).__name__)
+
+        if isinstance(request, SignalReviewRequest):
+            result = await self._invoke_review_signals(request)
+        elif isinstance(request, MacroSnapshotSummaryRequest):
+            result = await self._invoke_summarize_snapshot(request)
+        else:
+            result = await self._invoke_compare_snapshots(request)
+
+        _log.info(
+            "request_completed",
+            request_type=type(request).__name__,
+            success=result.success,
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Private dispatchers
@@ -185,8 +208,9 @@ class AgentRuntime:
     async def _invoke_review_signals(
         self, request: SignalReviewRequest
     ) -> AgentRuntimeResult:
-        _log.debug("AgentRuntime: dispatching review_signals (request_id=%s)", request.request_id)
-        response: AgentResponse = await self._service.review_signals(request)
+        async with timed_operation("runtime", "review_signals", _log):
+            _log.debug("dispatching_operation", operation="review_signals")
+            response: AgentResponse = await self._service.review_signals(request)
         return AgentRuntimeResult(
             operation=AgentOperation.REVIEW_SIGNALS,
             response=response,  # type: ignore[arg-type]
@@ -195,11 +219,9 @@ class AgentRuntime:
     async def _invoke_summarize_snapshot(
         self, request: MacroSnapshotSummaryRequest
     ) -> AgentRuntimeResult:
-        _log.debug(
-            "AgentRuntime: dispatching summarize_macro_snapshot (request_id=%s)",
-            request.request_id,
-        )
-        response: AgentResponse = await self._service.summarize_macro_snapshot(request)
+        async with timed_operation("runtime", "summarize_macro_snapshot", _log):
+            _log.debug("dispatching_operation", operation="summarize_macro_snapshot")
+            response: AgentResponse = await self._service.summarize_macro_snapshot(request)
         return AgentRuntimeResult(
             operation=AgentOperation.SUMMARIZE_MACRO_SNAPSHOT,
             response=response,  # type: ignore[arg-type]
@@ -208,11 +230,9 @@ class AgentRuntime:
     async def _invoke_compare_snapshots(
         self, request: SnapshotComparisonRequest
     ) -> AgentRuntimeResult:
-        _log.debug(
-            "AgentRuntime: dispatching compare_snapshots (request_id=%s)",
-            request.request_id,
-        )
-        response: AgentResponse = await self._service.compare_snapshots(request)
+        async with timed_operation("runtime", "compare_snapshots", _log):
+            _log.debug("dispatching_operation", operation="compare_snapshots")
+            response: AgentResponse = await self._service.compare_snapshots(request)
         return AgentRuntimeResult(
             operation=AgentOperation.COMPARE_SNAPSHOTS,
             response=response,  # type: ignore[arg-type]

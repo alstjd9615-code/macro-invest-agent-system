@@ -22,15 +22,31 @@ Callable boundary contract
 from __future__ import annotations
 
 import asyncio
-import logging
 import time
 
+from core.exceptions.base import PartialDataError, ProviderError, StaleDataError
+from core.exceptions.failure_category import FailureCategory
 from domain.signals.enums import SignalType
 from domain.signals.registry import SignalRegistry, default_registry
 from mcp.schemas.run_signal_engine import RunSignalEngineRequest, RunSignalEngineResponse
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
+
+
+def _provider_error_to_category(exc: ProviderError) -> FailureCategory:
+    """Map a ProviderError subclass to the appropriate FailureCategory."""
+    from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
+
+    if isinstance(exc, ProviderTimeoutError):
+        return FailureCategory.PROVIDER_TIMEOUT
+    if isinstance(exc, ProviderHTTPError):
+        return FailureCategory.PROVIDER_HTTP
+    if isinstance(exc, ProviderNetworkError):
+        return FailureCategory.PROVIDER_NETWORK
+    return FailureCategory.UNKNOWN
 
 # Sentinel returned in error responses where no run ID was generated.
 _NO_RUN_ID = ""
@@ -113,20 +129,56 @@ async def handle_run_signal_engine(
     # ------------------------------------------------------------------
     # 3. Fetch the macro snapshot.
     # ------------------------------------------------------------------
+    _log.debug("mcp_tool_invoked", tool="run_signal_engine", request_id=request.request_id)
     try:
-        snapshot = await macro_service.get_snapshot(country=request.country)
+        async with timed_operation("mcp_tool", "fetch_snapshot_for_engine", _log):
+            snapshot = await macro_service.get_snapshot(country=request.country)
+    except ProviderError as exc:
+        category = _provider_error_to_category(exc)
+        _log.warning(
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            failure_category=category,
+        )
+        return RunSignalEngineResponse(
+            request_id=request.request_id,
+            engine_run_id=_NO_RUN_ID,
+            success=False,
+            error_message=str(exc),
+            failure_category=category,
+        )
+    except StaleDataError as exc:
+        _log.warning(
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            failure_category=FailureCategory.STALE_DATA,
+        )
+        return RunSignalEngineResponse(
+            request_id=request.request_id,
+            engine_run_id=_NO_RUN_ID,
+            success=False,
+            error_message=str(exc),
+            failure_category=FailureCategory.STALE_DATA,
+            is_degraded=True,
+        )
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
         _log.exception(
-            "Unexpected error fetching macro snapshot (request_id=%s)",
-            request.request_id,
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            step="fetch_snapshot",
+            request_id=request.request_id,
         )
         return RunSignalEngineResponse(
             request_id=request.request_id,
             engine_run_id=_NO_RUN_ID,
             success=False,
             error_message="Failed to fetch macro snapshot.",
+            failure_category=FailureCategory.UNKNOWN,
         )
 
     # ------------------------------------------------------------------
@@ -134,22 +186,33 @@ async def handle_run_signal_engine(
     # ------------------------------------------------------------------
     start = time.perf_counter()
     try:
-        result = await signal_service.run_engine(signal_definitions, snapshot)
+        async with timed_operation("mcp_tool", "run_signal_engine_core", _log):
+            result = await signal_service.run_engine(signal_definitions, snapshot)
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
         _log.exception(
-            "Unexpected error running signal engine (request_id=%s)",
-            request.request_id,
+            "mcp_tool_returned",
+            tool="run_signal_engine",
+            success=False,
+            step="run_engine",
+            request_id=request.request_id,
         )
         return RunSignalEngineResponse(
             request_id=request.request_id,
             engine_run_id=_NO_RUN_ID,
             success=False,
             error_message="Signal engine execution failed.",
+            failure_category=FailureCategory.UNKNOWN,
         )
     execution_ms = (time.perf_counter() - start) * 1000.0
 
+    _log.debug(
+        "mcp_tool_returned",
+        tool="run_signal_engine",
+        success=True,
+        signals_generated=len(result.signals),
+    )
     return RunSignalEngineResponse(
         request_id=request.request_id,
         engine_run_id=result.run_id,

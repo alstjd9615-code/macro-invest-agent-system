@@ -26,9 +26,13 @@ from datetime import UTC, datetime
 
 from adapters.sources.fred.normalizer import normalize_fred_observation
 from adapters.sources.fred.series_map import FRED_SERIES_MAP
-from core.contracts.macro_data_source import MacroDataSourceContract
+from core.contracts.macro_data_source import MacroDataSourceContract, SourceMetadata
+from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
 from domain.macro.enums import MacroIndicatorType
 from domain.macro.models import MacroFeature
+from core.logging.logger import get_logger
+
+_log = get_logger(__name__)
 
 
 class FredMacroDataSource(MacroDataSourceContract):
@@ -71,6 +75,19 @@ class FredMacroDataSource(MacroDataSourceContract):
         """Stable identifier for this adapter."""
         return "fred"
 
+    @property
+    def metadata(self) -> SourceMetadata:
+        """Source metadata for SourceRegistry selection.
+
+        Reports all indicators available in :data:`~adapters.sources.fred.series_map.FRED_SERIES_MAP`.
+        The API key is not exposed here.
+        """
+        return SourceMetadata(
+            source_id="fred",
+            priority=10,
+            supported_indicators=frozenset(i.value for i in FRED_SERIES_MAP),
+        )
+
     async def fetch_raw(
         self,
         country: str,
@@ -111,8 +128,19 @@ class FredMacroDataSource(MacroDataSourceContract):
             if series_id is None:
                 continue  # not in the supported series map — skip
 
+            _log.debug("fred_fetch_started", series_id=series_id, country=country)
+            import time as _time
+            _start = _time.perf_counter_ns()
             raw_value_str, obs_date = self._fetch_latest_observation(series_id)
+            _latency_ms = (_time.perf_counter_ns() - _start) / 1_000_000.0
             if raw_value_str is None:
+                _log.debug(
+                    "fred_fetch_complete",
+                    series_id=series_id,
+                    country=country,
+                    latency_ms=round(_latency_ms, 3),
+                    result="no_observations",
+                )
                 continue  # FRED returned no observations
 
             feature = normalize_fred_observation(
@@ -123,6 +151,13 @@ class FredMacroDataSource(MacroDataSourceContract):
                 indicator=indicator,
             )
             if feature is not None:
+                _log.debug(
+                    "fred_fetch_complete",
+                    series_id=series_id,
+                    country=country,
+                    latency_ms=round(_latency_ms, 3),
+                    result="ok",
+                )
                 features.append(feature)
 
         return features
@@ -168,19 +203,41 @@ class FredMacroDataSource(MacroDataSourceContract):
                     )
                 payload = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            raise RuntimeError(
+            _log.warning(
+                "fred_fetch_failed",
+                series_id=series_id,
+                error="http_error",
+                http_status=exc.code,
+            )
+            raise ProviderHTTPError(
                 f"FRED API HTTP error {exc.code} for series={series_id!r}: {exc.reason}. "
-                f"Verify your FRED_API_KEY and network access."
+                f"Verify your FRED_API_KEY and network access.",
+                provider_id="fred",
+                http_status=exc.code,
             ) from exc
         except TimeoutError as exc:
-            raise RuntimeError(
+            _log.warning(
+                "fred_fetch_failed",
+                series_id=series_id,
+                error="timeout",
+                timeout_s=self._timeout_s,
+            )
+            raise ProviderTimeoutError(
                 f"FRED API request timed out after {self._timeout_s}s for series={series_id!r}. "
-                f"Check your network connection or increase fred_request_timeout_s."
+                f"Check your network connection or increase fred_request_timeout_s.",
+                provider_id="fred",
+                timeout_s=self._timeout_s,
             ) from exc
         except OSError as exc:
-            raise RuntimeError(
+            _log.warning(
+                "fred_fetch_failed",
+                series_id=series_id,
+                error="network_error",
+            )
+            raise ProviderNetworkError(
                 f"FRED API network error for series={series_id!r}: {exc}. "
-                f"Check your network connection."
+                f"Check your network connection.",
+                provider_id="fred",
             ) from exc
 
         observations = payload.get("observations", [])

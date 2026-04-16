@@ -52,7 +52,6 @@ to work without change.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from agent.context.models import AnalysisParameters, ConversationContext, ConversationTurn
@@ -79,8 +78,9 @@ from agent.schemas import (
     SnapshotComparisonResponse,
 )
 from agent.service import AgentService
+from core.logging.logger import get_logger
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 _DEFAULT_MAX_TURNS = 10
 
@@ -261,10 +261,7 @@ class LangChainAgentRuntime:
         request: SignalReviewRequest,
         context_hint: str,
     ) -> AgentRuntimeResult:
-        _log.debug(
-            "LangChainAgentRuntime: dispatching review_signals (request_id=%s)",
-            request.request_id,
-        )
+        _log.debug("dispatching_operation", operation="review_signals")
         response = await self._service.review_signals(request)
         if response.success:
             response = self._reformat_signal_review(response, request, context_hint)
@@ -278,10 +275,7 @@ class LangChainAgentRuntime:
         request: MacroSnapshotSummaryRequest,
         context_hint: str,
     ) -> AgentRuntimeResult:
-        _log.debug(
-            "LangChainAgentRuntime: dispatching summarize_macro_snapshot (request_id=%s)",
-            request.request_id,
-        )
+        _log.debug("dispatching_operation", operation="summarize_macro_snapshot")
         response = await self._service.summarize_macro_snapshot(request)
         if response.success:
             response = self._reformat_snapshot_summary(response, context_hint)
@@ -295,10 +289,7 @@ class LangChainAgentRuntime:
         request: SnapshotComparisonRequest,
         context_hint: str,
     ) -> AgentRuntimeResult:
-        _log.debug(
-            "LangChainAgentRuntime: dispatching compare_snapshots (request_id=%s)",
-            request.request_id,
-        )
+        _log.debug("dispatching_operation", operation="compare_snapshots")
         response = await self._service.compare_snapshots(request)
         if response.success:
             response = self._reformat_comparison_summary(response, context_hint)

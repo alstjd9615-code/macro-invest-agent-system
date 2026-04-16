@@ -27,8 +27,13 @@ class MacroServiceInterface(ABC):
             List of MacroFeature objects
 
         Raises:
-            ValueError: If indicator_types is empty
-            RuntimeError: If data fetch fails
+            ValueError: If indicator_types is empty.
+            ProviderTimeoutError: If the upstream provider times out.
+            ProviderHTTPError: If the upstream provider returns a non-2xx HTTP
+                status.
+            ProviderNetworkError: On network I/O failure.
+            PartialDataError: If fewer indicators are returned than requested
+                (degraded but not a hard failure).
         """
 
     @abstractmethod
@@ -42,7 +47,12 @@ class MacroServiceInterface(ABC):
             MacroSnapshot containing all available features
 
         Raises:
-            RuntimeError: If snapshot cannot be created
+            ProviderTimeoutError: If the upstream provider times out.
+            ProviderHTTPError: If the upstream provider returns a non-2xx HTTP
+                status.
+            ProviderNetworkError: On network I/O failure.
+            StaleDataError: If the snapshot is beyond the freshness threshold.
+            RuntimeError: If snapshot cannot be created for other reasons.
         """
 
 
