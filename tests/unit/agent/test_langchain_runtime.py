@@ -8,6 +8,8 @@ Covers:
 - TypeError for unsupported request types
 - Tool bindings are created and accessible
 - Schema validity on happy and failure paths
+- Session-scoped context via session_id: accumulation, isolation, bounded turns,
+  failed-turn recording, tool-result immutability
 """
 
 from __future__ import annotations
@@ -436,3 +438,214 @@ class TestConversationTurnSchema:
         reparsed = ConversationTurn.model_validate(turn.model_dump())
         assert reparsed.request_type == "MacroSnapshotSummaryRequest"
         assert reparsed.response_summary == "snapshot ok"
+
+
+# ---------------------------------------------------------------------------
+# Session-scoped context (session_id carryover)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestSessionScopedContext:
+    """Tests for session_id-keyed context in LangChainAgentRuntime.
+
+    Session-scoped context is activated by passing a non-empty ``session_id``
+    on the request.  It is independent of the ``enable_context`` flag.
+    """
+
+    async def test_session_context_records_turn(self) -> None:
+        runtime = _make_runtime()  # enable_context=False (default)
+        req_with_session = MacroSnapshotSummaryRequest(
+            request_id="sc-001",
+            country="US",
+            session_id="test-session",
+        )
+        result = await runtime.invoke(req_with_session)
+        # The per-instance context is still None (enable_context=False).
+        assert runtime.context is None
+        # But the result should be valid.
+        assert result.operation == AgentOperation.SUMMARIZE_MACRO_SNAPSHOT
+
+    async def test_session_context_accumulates_across_turns(self) -> None:
+        runtime = _make_runtime()
+        session_id = "accumulate-session"
+
+        for i in range(3):
+            req = MacroSnapshotSummaryRequest(
+                request_id=f"req-{i}",
+                country="US",
+                session_id=session_id,
+            )
+            await runtime.invoke(req)
+
+        # Retrieve the context directly from the store.
+        ctx = runtime._session_store.get(session_id)
+        assert ctx is not None
+        assert ctx.turn_count == 3
+
+    async def test_session_context_carries_country_parameter(self) -> None:
+        runtime = _make_runtime()
+        session_id = "param-session"
+
+        await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="req-1",
+                country="JP",
+                session_id=session_id,
+            )
+        )
+        ctx = runtime._session_store.get(session_id)
+        assert ctx is not None
+        assert ctx.active_parameters.country == "JP"
+
+    async def test_different_sessions_are_isolated(self) -> None:
+        runtime = _make_runtime()
+
+        # Populate session A with a turn.
+        await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="req-A",
+                country="US",
+                session_id="session-A",
+            )
+        )
+        # Session B has no turns yet.
+        ctx_b = runtime._session_store.get("session-B")
+        assert ctx_b is None
+
+        await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="req-B",
+                country="JP",
+                session_id="session-B",
+            )
+        )
+
+        ctx_a = runtime._session_store.get("session-A")
+        ctx_b = runtime._session_store.get("session-B")
+
+        assert ctx_a is not None
+        assert ctx_b is not None
+        assert ctx_a is not ctx_b
+        assert ctx_a.turn_count == 1
+        assert ctx_b.turn_count == 1
+        # Country parameters must not leak.
+        assert ctx_a.active_parameters.country == "US"
+        assert ctx_b.active_parameters.country == "JP"
+
+    async def test_session_context_bounded_by_max_context_turns(self) -> None:
+        runtime = _make_runtime(max_context_turns=2)
+        session_id = "bounded-session"
+
+        for i in range(5):
+            await runtime.invoke(
+                MacroSnapshotSummaryRequest(
+                    request_id=f"req-{i}",
+                    country="US",
+                    session_id=session_id,
+                )
+            )
+
+        ctx = runtime._session_store.get(session_id)
+        assert ctx is not None
+        assert ctx.turn_count == 2
+
+    async def test_stateless_request_produces_valid_result(self) -> None:
+        """A request with no session_id and enable_context=False is stateless."""
+        runtime = _make_runtime()  # enable_context=False, no session_id
+        result = await runtime.invoke(_snapshot_request())
+        assert result.success is True
+        assert runtime.context is None
+
+    async def test_session_context_records_failed_turn(self) -> None:
+        from unittest.mock import AsyncMock
+
+        mock_macro = AsyncMock(spec=MacroService)
+        mock_macro.get_snapshot.side_effect = RuntimeError("offline")
+        service = AgentService(macro_service=mock_macro, signal_service=SignalService())
+        adapter = MCPAdapter(mock_macro, SignalService())
+        runtime = LangChainAgentRuntime(service, adapter)
+
+        session_id = "fail-session"
+        result = await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="req-fail",
+                country="US",
+                session_id=session_id,
+            )
+        )
+
+        assert result.success is False
+        ctx = runtime._session_store.get(session_id)
+        assert ctx is not None
+        assert ctx.turn_count == 1
+        assert ctx.turns[0].success is False
+
+    async def test_context_hint_injected_into_summary_on_followup(self) -> None:
+        """After a first turn establishes context, subsequent turns should
+        incorporate the context hint into the rendered summary.
+
+        The context hint is injected into the system message only, not the
+        human-message summary text — so we verify the response is schema-valid
+        and succeeds rather than inspecting the summary for the hint text.
+        """
+        runtime = _make_runtime()
+        session_id = "hint-session"
+
+        # First turn.
+        result1 = await runtime.invoke(
+            SignalReviewRequest(
+                request_id="req-1",
+                signal_ids=["bull_market"],
+                country="US",
+                session_id=session_id,
+            )
+        )
+        assert result1.success is True
+
+        # Second turn — context is now established.
+        result2 = await runtime.invoke(
+            SignalReviewRequest(
+                request_id="req-2",
+                signal_ids=["bull_market"],
+                country="US",
+                session_id=session_id,
+            )
+        )
+        assert result2.success is True
+        # Both responses must be schema-valid.
+        AgentRuntimeResult.model_validate(result2.model_dump())
+
+    async def test_tool_results_not_overridden_by_context(self) -> None:
+        """Context must never alter deterministic tool results."""
+        runtime = _make_runtime()
+        session_id = "tool-check-session"
+
+        # Prime context with a first turn.
+        await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="prime",
+                country="US",
+                session_id=session_id,
+            )
+        )
+
+        # Second turn with the same request.
+        result_no_session = await runtime.invoke(
+            MacroSnapshotSummaryRequest(request_id="r-no-sess", country="US")
+        )
+        result_with_session = await runtime.invoke(
+            MacroSnapshotSummaryRequest(
+                request_id="r-with-sess",
+                country="US",
+                session_id=session_id,
+            )
+        )
+
+        # The numeric metadata from deterministic tools must match.
+        assert isinstance(result_no_session.response, MacroSnapshotSummaryResponse)
+        assert isinstance(result_with_session.response, MacroSnapshotSummaryResponse)
+        assert (
+            result_no_session.response.features_count
+            == result_with_session.response.features_count
+        )

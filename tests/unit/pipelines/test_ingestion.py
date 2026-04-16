@@ -23,7 +23,6 @@ from domain.macro.models import MacroFeature
 from pipelines.ingestion.macro_ingestion_service import DEFAULT_INDICATORS, MacroIngestionService
 from pipelines.ingestion.models import FeatureSnapshot
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

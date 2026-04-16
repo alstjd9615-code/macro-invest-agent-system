@@ -37,6 +37,11 @@ from __future__ import annotations
 
 import logging
 
+from agent.formatting.comparison import (
+    format_comparison_error,
+    format_comparison_summary,
+    format_prior_missing_error,
+)
 from agent.formatting.errors import format_signal_review_error, format_snapshot_summary_error
 from agent.formatting.summaries import format_signal_review_summary, format_snapshot_summary
 from agent.mcp_adapter import MCPAdapter, MCPToolError
@@ -45,7 +50,10 @@ from agent.schemas import (
     MacroSnapshotSummaryResponse,
     SignalReviewRequest,
     SignalReviewResponse,
+    SnapshotComparisonRequest,
+    SnapshotComparisonResponse,
 )
+from domain.macro.comparison import compare_snapshots as domain_compare_snapshots
 from domain.signals.registry import SignalRegistry
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
 
@@ -60,12 +68,14 @@ _log = logging.getLogger(__name__)
 class AgentService:
     """Read-only agent service that orchestrates MCP tool calls.
 
-    Provides two operations:
+    Provides three operations:
 
     * :meth:`review_signals` — run the signal engine and summarise results.
     * :meth:`summarize_macro_snapshot` — fetch and summarise the macro snapshot.
+    * :meth:`compare_snapshots` — compare the current snapshot against prior
+      feature values and return a structured "what changed" summary.
 
-    Both operations return schema-validated response objects and never raise.
+    All operations return schema-validated response objects and never raise.
 
     Args:
         macro_service: Macro data service implementation.
@@ -80,6 +90,7 @@ class AgentService:
         signal_service: SignalServiceInterface,
         registry: SignalRegistry | None = None,
     ) -> None:
+        self._macro_service = macro_service
         self._adapter = MCPAdapter(macro_service, signal_service, registry)
 
     # ------------------------------------------------------------------
@@ -184,4 +195,95 @@ class AgentService:
             country=request.country,
             snapshot_timestamp=snapshot_response.snapshot_timestamp,
             features_count=snapshot_response.features_count,
+        )
+
+    async def compare_snapshots(
+        self,
+        request: SnapshotComparisonRequest,
+    ) -> SnapshotComparisonResponse:
+        """Compare the current macro snapshot against provided prior values.
+
+        Pipeline:
+
+        1. Reject requests with empty *prior_features* (prior snapshot missing).
+        2. Fetch the current snapshot directly from the macro service.
+        3. Run the deterministic :func:`~domain.macro.comparison.compare_snapshots`
+           function against the provided prior feature values.
+        4. Format the result into a :class:`~agent.schemas.SnapshotComparisonResponse`.
+
+        Args:
+            request: Validated :class:`~agent.schemas.SnapshotComparisonRequest`.
+
+        Returns:
+            :class:`~agent.schemas.SnapshotComparisonResponse` —
+            ``success=True`` with change counts and a deterministic ``summary``
+            on success, or ``success=False`` with ``error_message`` on any
+            failure (prior missing, tool failure).
+        """
+        # ------------------------------------------------------------------
+        # Guard: prior snapshot missing
+        # ------------------------------------------------------------------
+        if not request.prior_features:
+            _log.warning(
+                "Snapshot comparison has no prior features (request_id=%s)",
+                request.request_id,
+            )
+            return SnapshotComparisonResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=format_prior_missing_error(
+                    prior_snapshot_label=request.prior_snapshot_label,
+                    request_id=request.request_id,
+                    country=request.country,
+                ),
+                country=request.country,
+                prior_snapshot_label=request.prior_snapshot_label,
+            )
+
+        # ------------------------------------------------------------------
+        # Fetch current snapshot and compare
+        # ------------------------------------------------------------------
+        # We call the macro service directly here to obtain the full domain
+        # MacroSnapshot with typed MacroFeature objects for comparison.
+        # The MCP tool layer only returns a lightweight response (count +
+        # timestamp), which is insufficient for per-indicator comparison.
+        try:
+            full_snapshot = await self._macro_service.get_snapshot(country=request.country)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning(
+                "Snapshot comparison failed — could not fetch full snapshot "
+                "(request_id=%s): %s",
+                request.request_id,
+                exc,
+            )
+            return SnapshotComparisonResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=format_comparison_error(
+                    raw_error=str(exc),
+                    request_id=request.request_id,
+                    country=request.country,
+                ),
+                country=request.country,
+                prior_snapshot_label=request.prior_snapshot_label,
+            )
+
+        comparison = domain_compare_snapshots(
+            current=full_snapshot,
+            prior_features=request.prior_features,
+            prior_snapshot_label=request.prior_snapshot_label,
+            country=request.country,
+        )
+
+        summary = format_comparison_summary(comparison)
+        return SnapshotComparisonResponse(
+            request_id=request.request_id,
+            success=True,
+            summary=summary,
+            country=request.country,
+            prior_snapshot_label=request.prior_snapshot_label,
+            current_snapshot_timestamp=comparison.current_snapshot_timestamp,
+            changed_count=comparison.changed_count,
+            unchanged_count=comparison.unchanged_count,
+            no_prior_count=comparison.no_prior_count,
         )
