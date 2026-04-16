@@ -5,6 +5,9 @@ from datetime import datetime
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
 from services.interfaces import MacroServiceInterface
+from core.logging.logger import get_logger
+
+_log = get_logger(__name__)
 
 
 class MacroService(MacroServiceInterface):
@@ -35,6 +38,13 @@ class MacroService(MacroServiceInterface):
         if not indicator_types:
             raise ValueError("At least one indicator type must be specified")
 
+        _log.debug(
+            "service_fetch_started",
+            operation="fetch_features",
+            country=country,
+            indicator_count=len(indicator_types),
+        )
+
         # Placeholder: return synthetic features
         features: list[MacroFeature] = []
         for indicator_name in indicator_types:
@@ -54,6 +64,12 @@ class MacroService(MacroServiceInterface):
                 # Invalid indicator type, skip
                 continue
 
+        _log.debug(
+            "service_fetch_complete",
+            operation="fetch_features",
+            country=country,
+            features_returned=len(features),
+        )
         return features
 
     async def get_snapshot(self, country: str = "US") -> MacroSnapshot:
@@ -70,6 +86,8 @@ class MacroService(MacroServiceInterface):
         Raises:
             RuntimeError: If snapshot cannot be created
         """
+        _log.debug("service_fetch_started", operation="get_snapshot", country=country)
+
         # Placeholder: fetch common indicators
         common_indicators = [
             MacroIndicatorType.GDP.value,
@@ -82,6 +100,12 @@ class MacroService(MacroServiceInterface):
         if not features:
             raise RuntimeError(f"Could not fetch macro data for {country}")
 
+        _log.debug(
+            "service_fetch_complete",
+            operation="get_snapshot",
+            country=country,
+            features_count=len(features),
+        )
         return MacroSnapshot(
             features=features,
             snapshot_time=datetime.utcnow(),

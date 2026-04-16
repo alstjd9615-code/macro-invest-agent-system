@@ -35,8 +35,6 @@ Usage example::
 
 from __future__ import annotations
 
-import logging
-
 from agent.formatting.comparison import (
     format_comparison_error,
     format_comparison_summary,
@@ -56,8 +54,10 @@ from agent.schemas import (
 from domain.macro.comparison import compare_snapshots as domain_compare_snapshots
 from domain.signals.registry import SignalRegistry
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -111,17 +111,20 @@ class AgentService:
             with signal counts and a deterministic ``summary`` on success, or
             ``success=False`` with ``error_message`` on any tool failure.
         """
+        _log.info("service_called", operation="review_signals", country=request.country)
         try:
-            engine_response = await self._adapter.run_signal_engine(
-                request_id=request.request_id,
-                signal_ids=request.signal_ids,
-                country=request.country,
-            )
+            async with timed_operation("service", "review_signals", _log):
+                engine_response = await self._adapter.run_signal_engine(
+                    request_id=request.request_id,
+                    signal_ids=request.signal_ids,
+                    country=request.country,
+                )
         except MCPToolError as exc:
             _log.warning(
-                "Signal review failed (request_id=%s): %s",
-                request.request_id,
-                exc,
+                "service_failed",
+                operation="review_signals",
+                tool=exc.tool_name,
+                error=exc.error_message,
             )
             return SignalReviewResponse(
                 request_id=request.request_id,
@@ -132,6 +135,7 @@ class AgentService:
                 ),
             )
 
+        _log.info("service_done", operation="review_signals", success=True)
         summary = format_signal_review_summary(
             engine_response, request.signal_ids, request.country
         )
@@ -165,16 +169,19 @@ class AgentService:
             ``summary`` on success, or ``success=False`` with
             ``error_message`` on any tool failure.
         """
+        _log.info("service_called", operation="summarize_macro_snapshot", country=request.country)
         try:
-            snapshot_response = await self._adapter.get_macro_snapshot(
-                request_id=request.request_id,
-                country=request.country,
-            )
+            async with timed_operation("service", "summarize_macro_snapshot", _log):
+                snapshot_response = await self._adapter.get_macro_snapshot(
+                    request_id=request.request_id,
+                    country=request.country,
+                )
         except MCPToolError as exc:
             _log.warning(
-                "Macro snapshot summary failed (request_id=%s): %s",
-                request.request_id,
-                exc,
+                "service_failed",
+                operation="summarize_macro_snapshot",
+                tool=exc.tool_name,
+                error=exc.error_message,
             )
             return MacroSnapshotSummaryResponse(
                 request_id=request.request_id,
@@ -187,6 +194,7 @@ class AgentService:
                 country=request.country,
             )
 
+        _log.info("service_done", operation="summarize_macro_snapshot", success=True)
         summary = format_snapshot_summary(snapshot_response, request.country)
         return MacroSnapshotSummaryResponse(
             request_id=request.request_id,
@@ -225,8 +233,9 @@ class AgentService:
         # ------------------------------------------------------------------
         if not request.prior_features:
             _log.warning(
-                "Snapshot comparison has no prior features (request_id=%s)",
-                request.request_id,
+                "service_prior_missing",
+                operation="compare_snapshots",
+                prior_label=request.prior_snapshot_label,
             )
             return SnapshotComparisonResponse(
                 request_id=request.request_id,
@@ -247,14 +256,15 @@ class AgentService:
         # MacroSnapshot with typed MacroFeature objects for comparison.
         # The MCP tool layer only returns a lightweight response (count +
         # timestamp), which is insufficient for per-indicator comparison.
+        _log.info("service_called", operation="compare_snapshots", country=request.country)
         try:
-            full_snapshot = await self._macro_service.get_snapshot(country=request.country)
+            async with timed_operation("service", "compare_snapshots", _log):
+                full_snapshot = await self._macro_service.get_snapshot(country=request.country)
         except Exception as exc:  # noqa: BLE001
             _log.warning(
-                "Snapshot comparison failed — could not fetch full snapshot "
-                "(request_id=%s): %s",
-                request.request_id,
-                exc,
+                "service_failed",
+                operation="compare_snapshots",
+                error=type(exc).__name__,
             )
             return SnapshotComparisonResponse(
                 request_id=request.request_id,

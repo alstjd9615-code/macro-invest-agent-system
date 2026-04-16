@@ -16,7 +16,6 @@ Callable boundary contract
 from __future__ import annotations
 
 import asyncio
-import logging
 
 from mcp.schemas.get_macro_features import (
     GetMacroFeaturesRequest,
@@ -25,8 +24,10 @@ from mcp.schemas.get_macro_features import (
     GetMacroSnapshotResponse,
 )
 from services.interfaces import MacroServiceInterface
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 async def handle_get_macro_features(
@@ -55,12 +56,15 @@ async def handle_get_macro_features(
             features_count=0,
         )
 
+    _log.debug("mcp_tool_invoked", tool="get_macro_features", request_id=request.request_id)
     try:
-        features = await service.fetch_features(
-            indicator_types=request.indicator_types,
-            country=request.country,
-        )
+        async with timed_operation("mcp_tool", "get_macro_features", _log):
+            features = await service.fetch_features(
+                indicator_types=request.indicator_types,
+                country=request.country,
+            )
     except ValueError as exc:
+        _log.warning("mcp_tool_returned", tool="get_macro_features", success=False, error=str(exc))
         return GetMacroFeaturesResponse(
             request_id=request.request_id,
             success=False,
@@ -71,8 +75,10 @@ async def handle_get_macro_features(
         raise
     except Exception:  # noqa: BLE001
         _log.exception(
-            "Unexpected error fetching macro features (request_id=%s)",
-            request.request_id,
+            "mcp_tool_returned",
+            tool="get_macro_features",
+            success=False,
+            request_id=request.request_id,
         )
         return GetMacroFeaturesResponse(
             request_id=request.request_id,
@@ -81,6 +87,12 @@ async def handle_get_macro_features(
             features_count=0,
         )
 
+    _log.debug(
+        "mcp_tool_returned",
+        tool="get_macro_features",
+        success=True,
+        features_count=len(features),
+    )
     return GetMacroFeaturesResponse(
         request_id=request.request_id,
         success=True,
@@ -105,14 +117,18 @@ async def handle_get_macro_snapshot(
         ``success=True`` with snapshot metadata on success, or
         ``success=False`` with ``error_message`` on failure.
     """
+    _log.debug("mcp_tool_invoked", tool="get_macro_snapshot", request_id=request.request_id)
     try:
-        snapshot = await service.get_snapshot(country=request.country)
+        async with timed_operation("mcp_tool", "get_macro_snapshot", _log):
+            snapshot = await service.get_snapshot(country=request.country)
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001
         _log.exception(
-            "Unexpected error fetching macro snapshot (request_id=%s)",
-            request.request_id,
+            "mcp_tool_returned",
+            tool="get_macro_snapshot",
+            success=False,
+            request_id=request.request_id,
         )
         return GetMacroSnapshotResponse(
             request_id=request.request_id,
@@ -122,6 +138,12 @@ async def handle_get_macro_snapshot(
             features_count=0,
         )
 
+    _log.debug(
+        "mcp_tool_returned",
+        tool="get_macro_snapshot",
+        success=True,
+        features_count=len(snapshot.features),
+    )
     return GetMacroSnapshotResponse(
         request_id=request.request_id,
         success=True,
