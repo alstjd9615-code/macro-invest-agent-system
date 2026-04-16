@@ -1,4 +1,4 @@
-"""Macro data source adapter implementations."""
+"""FRED (Federal Reserve Economic Data) macro data source adapter."""
 
 from adapters.sources.fred.fred_macro_data_source import FredMacroDataSource
 

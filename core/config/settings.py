@@ -99,6 +99,23 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # FRED (Federal Reserve Economic Data)
+    # ------------------------------------------------------------------
+
+    fred_api_key: SecretStr | None = Field(
+        default=None,
+        description="FRED API key.  Required to call the live FRED API.  Never logged.",
+    )
+    fred_base_url: str = Field(
+        default="https://api.stlouisfed.org/fred",
+        description="Base URL for the FRED REST API.",
+    )
+    fred_request_timeout_s: float = Field(
+        default=10.0,
+        description="HTTP request timeout in seconds for FRED API calls.",
+    )
+
+    # ------------------------------------------------------------------
     # Convenience helpers
     # ------------------------------------------------------------------
 
