@@ -37,12 +37,22 @@ class AgentRequest(BaseModel):
         request_id: Unique identifier for this request, used for tracing
             across the MCP and service layers.
         timestamp: UTC timestamp at which the request was created.
+        session_id: Optional session identifier that enables conversation
+            context carryover.  When ``None`` (the default) the request is
+            treated as stateless and no context is looked up or recorded.
     """
 
     request_id: str = Field(..., min_length=1, description="Unique request identifier for tracing")
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="Request creation timestamp (UTC)",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional session identifier for conversation context carryover. "
+            "When None, the request is stateless and no context is used."
+        ),
     )
 
 

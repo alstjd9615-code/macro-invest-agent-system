@@ -110,6 +110,7 @@ def render_signal_review_summary(
     dominant_direction: str,
     engine_run_id: str,
     execution_time_ms: str,
+    context_summary: str = "",
 ) -> str:
     """Render the signal review prompt template and return the human message.
 
@@ -118,10 +119,24 @@ def render_signal_review_summary(
     message is retained in the template for future LLM usage but is not
     included in the rendered summary.
 
+    When *context_summary* is non-empty it is appended to the system message
+    as a read-only context hint.  It never overrides or reinterprets tool
+    results.
+
     Returns:
         The rendered human message as a plain string.
     """
-    messages = SIGNAL_REVIEW_PROMPT.format_messages(
+    system = SIGNAL_REVIEW_SYSTEM_MESSAGE
+    if context_summary:
+        system = system + f" [Session context: {context_summary}]"
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system),
+            ("human", SIGNAL_REVIEW_HUMAN_TEMPLATE),
+        ]
+    )
+    messages = prompt.format_messages(
         signal_ids=signal_ids,
         country=country,
         signals_generated=signals_generated,
@@ -141,13 +156,27 @@ def render_snapshot_summary(
     country: str,
     features_count: int,
     snapshot_timestamp: str,
+    context_summary: str = "",
 ) -> str:
     """Render the snapshot summary prompt template and return the human message.
+
+    When *context_summary* is non-empty it is appended to the system message
+    as a read-only context hint.
 
     Returns:
         The rendered human message as a plain string.
     """
-    messages = SNAPSHOT_SUMMARY_PROMPT.format_messages(
+    system = SNAPSHOT_SUMMARY_SYSTEM_MESSAGE
+    if context_summary:
+        system = system + f" [Session context: {context_summary}]"
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system),
+            ("human", SNAPSHOT_SUMMARY_HUMAN_TEMPLATE),
+        ]
+    )
+    messages = prompt.format_messages(
         country=country,
         features_count=features_count,
         snapshot_timestamp=snapshot_timestamp,

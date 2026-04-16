@@ -10,10 +10,10 @@ Architecture
 
     Caller
       │
-      │  AgentRequest
+      │  AgentRequest (optional session_id)
       ▼
     ┌──────────────────────────┐
-    │  LangChainAgentRuntime   │ ← prompt templates + validation
+    │  LangChainAgentRuntime   │ ← prompt templates + context + validation
     └───────────┬──────────────┘
                 │
                 ▼
@@ -37,16 +37,18 @@ Design constraints
 * **Schema-safe**: every output is validated at the boundary before return.
 * **Backward-compatible**: the runtime exposes the same ``invoke`` interface
   as :class:`~agent.runtime.agent_runtime.AgentRuntime`.
+* **Session-scoped context**: when a request carries a ``session_id`` the
+  runtime injects recent-turn context into the prompt and records the turn.
+  Context never overrides tool results.
 """
 
 from __future__ import annotations
 
 import logging
-from collections import deque
 from typing import Any
 
-from pydantic import BaseModel, Field
-
+from agent.context.models import AnalysisParameters, ConversationContext, ConversationTurn
+from agent.context.store import InMemoryContextStore
 from agent.formatting.summaries import dominant_signal_type
 from agent.mcp_adapter import MCPAdapter
 from agent.prompts.templates import render_signal_review_summary, render_snapshot_summary
@@ -65,6 +67,21 @@ from agent.schemas import (
 from agent.service import AgentService
 
 _log = logging.getLogger(__name__)
+
+_DEFAULT_MAX_TURNS = 10
+
+# ---------------------------------------------------------------------------
+# Backward-compatible re-exports
+# ---------------------------------------------------------------------------
+# ConversationTurn and ConversationContext used to be defined here.
+# They have moved to agent.context.models; re-export them so that existing
+# tests and code that import from this module continue to work.
+
+__all__ = [
+    "ConversationContext",
+    "ConversationTurn",
+    "LangChainAgentRuntime",
+]
 
 
 # ---------------------------------------------------------------------------
