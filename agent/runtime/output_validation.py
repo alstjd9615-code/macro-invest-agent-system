@@ -23,7 +23,6 @@ from agent.schemas import (
     AgentResponse,
     MacroSnapshotSummaryResponse,
     SignalReviewResponse,
-    SnapshotComparisonResponse,
 )
 
 
@@ -129,35 +128,6 @@ def validate_snapshot_summary_response(
     return response
 
 
-def validate_snapshot_comparison_response(
-    response: SnapshotComparisonResponse,
-) -> SnapshotComparisonResponse:
-    """Validate a :class:`~agent.schemas.SnapshotComparisonResponse`.
-
-    In addition to the generic round-trip, this checks that change count
-    fields are non-negative (enforced by the schema, but re-verified here
-    for defence-in-depth).
-
-    Args:
-        response: The snapshot comparison response to validate.
-
-    Returns:
-        The original ``response`` if validation passes.
-
-    Raises:
-        OutputValidationError: If schema validation fails.
-    """
-    validate_agent_response(response)
-    if response.success:
-        for field_name in ("changed_count", "unchanged_count", "no_prior_count"):
-            value = getattr(response, field_name)
-            if value < 0:
-                raise OutputValidationError(
-                    detail=f"{field_name} must be >= 0, got {value}",
-                )
-    return response
-
-
 # ---------------------------------------------------------------------------
 # Runtime result validation
 # ---------------------------------------------------------------------------
@@ -191,8 +161,6 @@ def validate_runtime_result(result: AgentRuntimeResult) -> AgentRuntimeResult:
         validate_signal_review_response(result.response)
     elif isinstance(result.response, MacroSnapshotSummaryResponse):
         validate_snapshot_summary_response(result.response)
-    elif isinstance(result.response, SnapshotComparisonResponse):
-        validate_snapshot_comparison_response(result.response)
     else:
         validate_agent_response(result.response)
 

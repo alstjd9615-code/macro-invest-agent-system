@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from agent.formatting.errors import format_signal_review_error, format_snapshot_summary_error
 from agent.formatting.summaries import (
     dominant_signal_type,
@@ -20,6 +22,7 @@ from agent.formatting.summaries import (
 )
 from mcp.schemas.get_macro_features import GetMacroSnapshotResponse
 from mcp.schemas.run_signal_engine import RunSignalEngineResponse
+
 
 # ---------------------------------------------------------------------------
 # Helpers

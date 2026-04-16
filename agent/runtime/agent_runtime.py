@@ -24,7 +24,8 @@ Design constraints
 from __future__ import annotations
 
 import logging
-from enum import StrEnum
+from enum import Enum
+from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -34,8 +35,6 @@ from agent.schemas import (
     MacroSnapshotSummaryResponse,
     SignalReviewRequest,
     SignalReviewResponse,
-    SnapshotComparisonRequest,
-    SnapshotComparisonResponse,
 )
 from agent.service import AgentService
 
@@ -46,7 +45,7 @@ _log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class AgentOperation(StrEnum):
+class AgentOperation(str, Enum):
     """Enumeration of supported agent runtime operations.
 
     Each value corresponds to a method on :class:`~agent.service.AgentService`.
@@ -54,7 +53,6 @@ class AgentOperation(StrEnum):
 
     REVIEW_SIGNALS = "review_signals"
     SUMMARIZE_MACRO_SNAPSHOT = "summarize_macro_snapshot"
-    COMPARE_SNAPSHOTS = "compare_snapshots"
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +76,7 @@ class AgentRuntimeResult(BaseModel, extra="forbid"):
         ...,
         description="Agent operation that was executed",
     )
-    response: SignalReviewResponse | MacroSnapshotSummaryResponse | SnapshotComparisonResponse = Field(
+    response: Union[SignalReviewResponse, MacroSnapshotSummaryResponse] = Field(
         ...,
         description="Schema-validated agent response",
     )
@@ -99,7 +97,7 @@ class AgentRuntimeResult(BaseModel, extra="forbid"):
 # ---------------------------------------------------------------------------
 
 # Supported request type union
-AgentRequestInput = SignalReviewRequest | MacroSnapshotSummaryRequest | SnapshotComparisonRequest
+AgentRequestInput = Union[SignalReviewRequest, MacroSnapshotSummaryRequest]
 
 
 class AgentRuntime:
@@ -148,14 +146,11 @@ class AgentRuntime:
         * :class:`~agent.schemas.SignalReviewRequest` → ``review_signals``
         * :class:`~agent.schemas.MacroSnapshotSummaryRequest` →
           ``summarize_macro_snapshot``
-        * :class:`~agent.schemas.SnapshotComparisonRequest` →
-          ``compare_snapshots``
 
         Args:
             request: A validated agent request (
-                :class:`~agent.schemas.SignalReviewRequest`,
-                :class:`~agent.schemas.MacroSnapshotSummaryRequest`, or
-                :class:`~agent.schemas.SnapshotComparisonRequest`).
+                :class:`~agent.schemas.SignalReviewRequest` or
+                :class:`~agent.schemas.MacroSnapshotSummaryRequest`).
 
         Returns:
             :class:`AgentRuntimeResult` wrapping the schema-validated response.
@@ -170,12 +165,9 @@ class AgentRuntime:
             return await self._invoke_review_signals(request)
         if isinstance(request, MacroSnapshotSummaryRequest):
             return await self._invoke_summarize_snapshot(request)
-        if isinstance(request, SnapshotComparisonRequest):
-            return await self._invoke_compare_snapshots(request)
         raise TypeError(
             f"Unsupported request type: {type(request).__name__}. "
-            f"Expected SignalReviewRequest, MacroSnapshotSummaryRequest, "
-            f"or SnapshotComparisonRequest."
+            f"Expected SignalReviewRequest or MacroSnapshotSummaryRequest."
         )
 
     # ------------------------------------------------------------------
@@ -202,18 +194,5 @@ class AgentRuntime:
         response: AgentResponse = await self._service.summarize_macro_snapshot(request)
         return AgentRuntimeResult(
             operation=AgentOperation.SUMMARIZE_MACRO_SNAPSHOT,
-            response=response,  # type: ignore[arg-type]
-        )
-
-    async def _invoke_compare_snapshots(
-        self, request: SnapshotComparisonRequest
-    ) -> AgentRuntimeResult:
-        _log.debug(
-            "AgentRuntime: dispatching compare_snapshots (request_id=%s)",
-            request.request_id,
-        )
-        response: AgentResponse = await self._service.compare_snapshots(request)
-        return AgentRuntimeResult(
-            operation=AgentOperation.COMPARE_SNAPSHOTS,
             response=response,  # type: ignore[arg-type]
         )

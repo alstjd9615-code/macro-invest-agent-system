@@ -25,8 +25,6 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from domain.macro.comparison import PriorFeatureInput
-
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -101,53 +99,6 @@ class MacroSnapshotSummaryRequest(AgentRequest):
     """
 
     country: str = Field(default="US", description="Country code (ISO 3166-1 alpha-2)")
-
-
-class SnapshotComparisonRequest(AgentRequest):
-    """Request a deterministic comparison of the current macro snapshot against prior values.
-
-    The agent fetches the current snapshot for the given country and compares
-    it indicator-by-indicator against the provided *prior_features*.  When
-    *prior_features* is empty the response will indicate that the prior
-    snapshot is missing.
-
-    Attributes:
-        country: ISO 3166-1 alpha-2 country code (default ``"US"``).
-        prior_snapshot_label: Human-readable identifier for the prior
-            snapshot (e.g. ``"Q1-2026"`` or a date string).  Required.
-        prior_features: Minimal prior-snapshot data — one
-            :class:`~domain.macro.comparison.PriorFeatureInput` per
-            indicator.  An empty list triggers the "prior snapshot missing"
-            failure path.
-    """
-
-    country: str = Field(default="US", description="Country code (ISO 3166-1 alpha-2)")
-    prior_snapshot_label: str = Field(
-        ...,
-        min_length=1,
-        description="Human-readable label for the prior snapshot (e.g. 'Q1-2026')",
-    )
-    prior_features: list[PriorFeatureInput] = Field(
-        default_factory=list,
-        description=(
-            "Prior snapshot feature values. "
-            "Empty list triggers the prior-snapshot-missing failure path."
-        ),
-    )
-
-
-# Re-export PriorFeatureInput so callers can import it from agent.schemas.
-__all__ = [
-    "AgentRequest",
-    "SignalReviewRequest",
-    "MacroSnapshotSummaryRequest",
-    "SnapshotComparisonRequest",
-    "PriorFeatureInput",
-    "AgentResponse",
-    "SignalReviewResponse",
-    "MacroSnapshotSummaryResponse",
-    "SnapshotComparisonResponse",
-]
 
 
 # ---------------------------------------------------------------------------
@@ -248,49 +199,4 @@ class MacroSnapshotSummaryResponse(AgentResponse):
         default=0,
         ge=0,
         description="Number of macro features present in the snapshot",
-    )
-
-
-class SnapshotComparisonResponse(AgentResponse):
-    """Schema-validated result of a snapshot comparison.
-
-    Carries per-indicator change counts and metadata alongside the
-    agent-generated ``summary``.  All numeric fields default to zero so that
-    schema validation passes on the error path.
-
-    Attributes:
-        country: Country code for which the comparison was performed.
-        prior_snapshot_label: Label of the prior snapshot used for
-            comparison; empty on error.
-        current_snapshot_timestamp: Reference time of the current snapshot;
-            ``None`` on error.
-        changed_count: Number of indicators that changed (increased or
-            decreased); >= 0.
-        unchanged_count: Number of indicators with no change; >= 0.
-        no_prior_count: Number of indicators with no prior value; >= 0.
-    """
-
-    country: str = Field(default="", description="Country code for the comparison")
-    prior_snapshot_label: str = Field(
-        default="",
-        description="Label of the prior snapshot used for comparison; empty on error",
-    )
-    current_snapshot_timestamp: datetime | None = Field(
-        default=None,
-        description="Reference time of the current snapshot; None on error",
-    )
-    changed_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of indicators that changed (increased or decreased)",
-    )
-    unchanged_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of indicators with no change",
-    )
-    no_prior_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of indicators with no prior value available",
     )
