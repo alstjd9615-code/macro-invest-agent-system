@@ -59,7 +59,11 @@ from agent.context.models import AnalysisParameters, ConversationContext, Conver
 from agent.context.store import InMemoryContextStore
 from agent.formatting.summaries import dominant_signal_type
 from agent.mcp_adapter import MCPAdapter
-from agent.prompts.templates import render_signal_review_summary, render_snapshot_summary
+from agent.prompts.templates import (
+    render_signal_review_summary,
+    render_snapshot_comparison_summary,
+    render_snapshot_summary,
+)
 from agent.runtime.agent_runtime import (
     AgentOperation,
     AgentRequestInput,
@@ -71,6 +75,8 @@ from agent.schemas import (
     MacroSnapshotSummaryResponse,
     SignalReviewRequest,
     SignalReviewResponse,
+    SnapshotComparisonRequest,
+    SnapshotComparisonResponse,
 )
 from agent.service import AgentService
 
@@ -201,10 +207,13 @@ class LangChainAgentRuntime:
             result = await self._invoke_review_signals(request, context_hint)
         elif isinstance(request, MacroSnapshotSummaryRequest):
             result = await self._invoke_summarize_snapshot(request, context_hint)
+        elif isinstance(request, SnapshotComparisonRequest):
+            result = await self._invoke_compare_snapshots(request, context_hint)
         else:
             raise TypeError(
                 f"Unsupported request type: {type(request).__name__}. "
-                f"Expected SignalReviewRequest or MacroSnapshotSummaryRequest."
+                f"Expected SignalReviewRequest, MacroSnapshotSummaryRequest, "
+                f"or SnapshotComparisonRequest."
             )
 
         validate_runtime_result(result)
@@ -278,6 +287,23 @@ class LangChainAgentRuntime:
             response = self._reformat_snapshot_summary(response, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.SUMMARIZE_MACRO_SNAPSHOT,
+            response=response,  # type: ignore[arg-type]
+        )
+
+    async def _invoke_compare_snapshots(
+        self,
+        request: SnapshotComparisonRequest,
+        context_hint: str,
+    ) -> AgentRuntimeResult:
+        _log.debug(
+            "LangChainAgentRuntime: dispatching compare_snapshots (request_id=%s)",
+            request.request_id,
+        )
+        response = await self._service.compare_snapshots(request)
+        if response.success:
+            response = self._reformat_comparison_summary(response, context_hint)
+        return AgentRuntimeResult(
+            operation=AgentOperation.COMPARE_SNAPSHOTS,
             response=response,  # type: ignore[arg-type]
         )
 
@@ -365,6 +391,39 @@ class LangChainAgentRuntime:
         )
 
 
+    @staticmethod
+    def _reformat_comparison_summary(
+        response: SnapshotComparisonResponse,
+        context_hint: str = "",
+    ) -> SnapshotComparisonResponse:
+        """Re-render the comparison summary using the LangChain prompt template.
+
+        All numeric / metadata fields are preserved; only ``summary`` is
+        regenerated.  *context_hint* is appended to the system message when
+        non-empty but never overrides the deterministic comparison results.
+        """
+        new_summary = render_snapshot_comparison_summary(
+            country=response.country,
+            prior_snapshot_label=response.prior_snapshot_label,
+            changed_count=response.changed_count,
+            unchanged_count=response.unchanged_count,
+            no_prior_count=response.no_prior_count,
+            context_summary=context_hint,
+        )
+        return SnapshotComparisonResponse(
+            request_id=response.request_id,
+            timestamp=response.timestamp,
+            success=True,
+            summary=new_summary,
+            country=response.country,
+            prior_snapshot_label=response.prior_snapshot_label,
+            current_snapshot_timestamp=response.current_snapshot_timestamp,
+            changed_count=response.changed_count,
+            unchanged_count=response.unchanged_count,
+            no_prior_count=response.no_prior_count,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -373,9 +432,11 @@ class LangChainAgentRuntime:
 def _extract_parameters(request: AgentRequestInput) -> AnalysisParameters:
     """Extract :class:`~agent.context.models.AnalysisParameters` from a request.
 
-    Reads ``country`` from the request if present.  Other parameters are not
-    yet extractable from request objects in Phase 3 and default to ``None``.
+    Reads ``country`` from the request if present.  For
+    :class:`~agent.schemas.SnapshotComparisonRequest`, also reads
+    ``prior_snapshot_label`` as the ``comparison_target`` parameter.
     """
     country: str | None = getattr(request, "country", None)
-    return AnalysisParameters(country=country)
+    comparison_target: str | None = getattr(request, "prior_snapshot_label", None)
+    return AnalysisParameters(country=country, comparison_target=comparison_target)
 
