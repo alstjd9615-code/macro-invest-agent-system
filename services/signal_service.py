@@ -1,12 +1,15 @@
 """Signal evaluation service implementation skeleton."""
 
+from core.logging.logger import get_logger
+from core.tracing import get_tracer
+from core.tracing.span_attributes import SIGNAL_COUNT
 from domain.macro.models import MacroSnapshot
 from domain.signals.engine import SignalEngine
 from domain.signals.models import SignalDefinition, SignalResult
 from services.interfaces import SignalServiceInterface
-from core.logging.logger import get_logger
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 
 class SignalService(SignalServiceInterface):
@@ -74,7 +77,10 @@ class SignalService(SignalServiceInterface):
             operation="run_engine",
             signal_count=len(signal_definitions),
         )
-        result = await self.engine.run(signal_definitions, snapshot)
+        with _tracer.start_as_current_span("service.run_signal_engine") as span:
+            span.set_attribute("signal.definitions_count", len(signal_definitions))
+            result = await self.engine.run(signal_definitions, snapshot)
+            span.set_attribute(SIGNAL_COUNT, len(result.signals))
         _log.debug(
             "service_fetch_complete",
             operation="run_engine",

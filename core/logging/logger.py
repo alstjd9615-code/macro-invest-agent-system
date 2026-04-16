@@ -9,6 +9,10 @@ Provides a single :func:`get_logger` factory that returns a
 Every log record includes ``trace_id`` and ``session_id`` fields so that
 requests can be correlated across the domain, MCP, and agent layers.
 
+When the OpenTelemetry SDK is active, each record also carries
+``otel_trace_id`` and ``otel_span_id`` so that logs can be correlated with
+spans in any observability backend.
+
 Usage::
 
     from core.logging.logger import get_logger, bind_request_context
@@ -139,6 +143,22 @@ def _inject_session_id(
     return event_dict
 
 
+def _inject_otel_ids(
+    logger: Any,  # noqa: ANN401
+    method: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
+    """Structlog processor: add OTel trace/span IDs when a recording span is active.
+
+    Delegates to :func:`~core.tracing.tracer.inject_otel_context_into_structlog`
+    which is kept in the tracing module to avoid a circular import.  When the
+    OTel SDK is not active the call is a cheap no-op.
+    """
+    from core.tracing.tracer import inject_otel_context_into_structlog
+
+    return inject_otel_context_into_structlog(logger, method, event_dict)  # type: ignore[return-value]
+
+
 # ---------------------------------------------------------------------------
 # One-time configuration (idempotent)
 # ---------------------------------------------------------------------------
@@ -173,6 +193,7 @@ def _configure_structlog() -> None:
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
+        _inject_otel_ids,
     ]
 
     if settings.log_pretty:

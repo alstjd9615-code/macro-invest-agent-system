@@ -19,6 +19,16 @@ import asyncio
 
 from core.exceptions.base import PartialDataError, ProviderError, StaleDataError
 from core.exceptions.failure_category import FailureCategory
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
+from core.tracing import get_tracer
+from core.tracing.span_attributes import (
+    COUNTRY,
+    FEATURES_COUNT,
+    MCP_TOOL,
+    REQUEST_ID,
+    RESULT_SUCCESS,
+)
 from mcp.schemas.get_macro_features import (
     GetMacroFeaturesRequest,
     GetMacroFeaturesResponse,
@@ -26,10 +36,9 @@ from mcp.schemas.get_macro_features import (
     GetMacroSnapshotResponse,
 )
 from services.interfaces import MacroServiceInterface
-from core.logging.logger import get_logger
-from core.logging.timing import timed_operation
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 
 def _provider_error_to_category(exc: ProviderError) -> FailureCategory:
@@ -72,81 +81,94 @@ async def handle_get_macro_features(
         )
 
     _log.debug("mcp_tool_invoked", tool="get_macro_features", request_id=request.request_id)
-    try:
-        async with timed_operation("mcp_tool", "get_macro_features", _log):
-            features = await service.fetch_features(
-                indicator_types=request.indicator_types,
-                country=request.country,
+    with _tracer.start_as_current_span("mcp_tool.get_macro_features") as span:
+        span.set_attribute(MCP_TOOL, "get_macro_features")
+        span.set_attribute(REQUEST_ID, request.request_id)
+        span.set_attribute(COUNTRY, request.country)
+        span.set_attribute("indicator_count", len(request.indicator_types))
+        try:
+            async with timed_operation("mcp_tool", "get_macro_features", _log):
+                features = await service.fetch_features(
+                    indicator_types=request.indicator_types,
+                    country=request.country,
+                )
+        except ValueError as exc:
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning("mcp_tool_returned", tool="get_macro_features", success=False, error=str(exc))
+            return GetMacroFeaturesResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                features_count=0,
             )
-    except ValueError as exc:
-        _log.warning("mcp_tool_returned", tool="get_macro_features", success=False, error=str(exc))
-        return GetMacroFeaturesResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            features_count=0,
-        )
-    except ProviderError as exc:
-        category = _provider_error_to_category(exc)
-        _log.warning(
-            "mcp_tool_returned",
-            tool="get_macro_features",
-            success=False,
-            failure_category=category,
-        )
-        return GetMacroFeaturesResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            features_count=0,
-            failure_category=category,
-        )
-    except StaleDataError as exc:
-        _log.warning(
-            "mcp_tool_returned",
-            tool="get_macro_features",
-            success=False,
-            failure_category=FailureCategory.STALE_DATA,
-        )
-        return GetMacroFeaturesResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            features_count=0,
-            failure_category=FailureCategory.STALE_DATA,
-            is_degraded=True,
-        )
-    except PartialDataError as exc:
-        _log.warning(
-            "mcp_tool_returned",
-            tool="get_macro_features",
-            success=False,
-            failure_category=FailureCategory.PARTIAL_DATA,
-        )
-        return GetMacroFeaturesResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            features_count=exc.available_count,
-            failure_category=FailureCategory.PARTIAL_DATA,
-            is_degraded=True,
-        )
-    except asyncio.CancelledError:
-        raise
-    except Exception:  # noqa: BLE001
-        _log.exception(
-            "mcp_tool_returned",
-            tool="get_macro_features",
-            success=False,
-            request_id=request.request_id,
-        )
-        return GetMacroFeaturesResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message="Failed to fetch macro features.",
-            features_count=0,
-            failure_category=FailureCategory.UNKNOWN,
-        )
+        except ProviderError as exc:
+            category = _provider_error_to_category(exc)
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning(
+                "mcp_tool_returned",
+                tool="get_macro_features",
+                success=False,
+                failure_category=category,
+            )
+            return GetMacroFeaturesResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                features_count=0,
+                failure_category=category,
+            )
+        except StaleDataError as exc:
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning(
+                "mcp_tool_returned",
+                tool="get_macro_features",
+                success=False,
+                failure_category=FailureCategory.STALE_DATA,
+            )
+            return GetMacroFeaturesResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                features_count=0,
+                failure_category=FailureCategory.STALE_DATA,
+                is_degraded=True,
+            )
+        except PartialDataError as exc:
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning(
+                "mcp_tool_returned",
+                tool="get_macro_features",
+                success=False,
+                failure_category=FailureCategory.PARTIAL_DATA,
+            )
+            return GetMacroFeaturesResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                features_count=exc.available_count,
+                failure_category=FailureCategory.PARTIAL_DATA,
+                is_degraded=True,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.exception(
+                "mcp_tool_returned",
+                tool="get_macro_features",
+                success=False,
+                request_id=request.request_id,
+            )
+            return GetMacroFeaturesResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message="Failed to fetch macro features.",
+                features_count=0,
+                failure_category=FailureCategory.UNKNOWN,
+            )
+
+        span.set_attribute(RESULT_SUCCESS, True)
+        span.set_attribute(FEATURES_COUNT, len(features))
 
     _log.debug(
         "mcp_tool_returned",
@@ -179,58 +201,68 @@ async def handle_get_macro_snapshot(
         ``success=False`` with ``error_message`` on failure.
     """
     _log.debug("mcp_tool_invoked", tool="get_macro_snapshot", request_id=request.request_id)
-    try:
-        async with timed_operation("mcp_tool", "get_macro_snapshot", _log):
-            snapshot = await service.get_snapshot(country=request.country)
-    except ProviderError as exc:
-        category = _provider_error_to_category(exc)
-        _log.warning(
-            "mcp_tool_returned",
-            tool="get_macro_snapshot",
-            success=False,
-            failure_category=category,
-        )
-        return GetMacroSnapshotResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            snapshot_timestamp=None,
-            features_count=0,
-            failure_category=category,
-        )
-    except StaleDataError as exc:
-        _log.warning(
-            "mcp_tool_returned",
-            tool="get_macro_snapshot",
-            success=False,
-            failure_category=FailureCategory.STALE_DATA,
-        )
-        return GetMacroSnapshotResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message=str(exc),
-            snapshot_timestamp=None,
-            features_count=0,
-            failure_category=FailureCategory.STALE_DATA,
-            is_degraded=True,
-        )
-    except asyncio.CancelledError:
-        raise
-    except Exception:  # noqa: BLE001
-        _log.exception(
-            "mcp_tool_returned",
-            tool="get_macro_snapshot",
-            success=False,
-            request_id=request.request_id,
-        )
-        return GetMacroSnapshotResponse(
-            request_id=request.request_id,
-            success=False,
-            error_message="Failed to fetch macro snapshot.",
-            snapshot_timestamp=None,
-            features_count=0,
-            failure_category=FailureCategory.UNKNOWN,
-        )
+    with _tracer.start_as_current_span("mcp_tool.get_macro_snapshot") as span:
+        span.set_attribute(MCP_TOOL, "get_macro_snapshot")
+        span.set_attribute(REQUEST_ID, request.request_id)
+        span.set_attribute(COUNTRY, request.country)
+        try:
+            async with timed_operation("mcp_tool", "get_macro_snapshot", _log):
+                snapshot = await service.get_snapshot(country=request.country)
+        except ProviderError as exc:
+            category = _provider_error_to_category(exc)
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning(
+                "mcp_tool_returned",
+                tool="get_macro_snapshot",
+                success=False,
+                failure_category=category,
+            )
+            return GetMacroSnapshotResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                snapshot_timestamp=None,
+                features_count=0,
+                failure_category=category,
+            )
+        except StaleDataError as exc:
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.warning(
+                "mcp_tool_returned",
+                tool="get_macro_snapshot",
+                success=False,
+                failure_category=FailureCategory.STALE_DATA,
+            )
+            return GetMacroSnapshotResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message=str(exc),
+                snapshot_timestamp=None,
+                features_count=0,
+                failure_category=FailureCategory.STALE_DATA,
+                is_degraded=True,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            span.set_attribute(RESULT_SUCCESS, False)
+            _log.exception(
+                "mcp_tool_returned",
+                tool="get_macro_snapshot",
+                success=False,
+                request_id=request.request_id,
+            )
+            return GetMacroSnapshotResponse(
+                request_id=request.request_id,
+                success=False,
+                error_message="Failed to fetch macro snapshot.",
+                snapshot_timestamp=None,
+                features_count=0,
+                failure_category=FailureCategory.UNKNOWN,
+            )
+
+        span.set_attribute(RESULT_SUCCESS, True)
+        span.set_attribute(FEATURES_COUNT, len(snapshot.features))
 
     _log.debug(
         "mcp_tool_returned",
