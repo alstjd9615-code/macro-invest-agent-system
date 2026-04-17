@@ -17,3 +17,9 @@
 - **Reason**: The immediate request prioritized checklist verification and observable ingestion foundation quality.
 - **Tradeoff**: Added operational/docs artifacts before expanding additional data sources.
 - **Follow-up**: Add alert rules for the new ingestion-throughput metric in a later ops-focused Phase 1 task.
+
+## 2026-04-17 — Canonical documentation re-layering
+- **Decision**: Adopt strict role separation: concise README + canonical docs + historical logs + scoped backlog.
+- **Reason**: Reduce duplication/drift and make ownership of each topic explicit.
+- **Tradeoff**: Existing long-form mixed docs were reduced or linked instead of repeated.
+- **Follow-up**: Continue consolidating any remaining overlapping legacy docs into canonical files.

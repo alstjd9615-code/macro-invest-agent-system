@@ -85,3 +85,27 @@
 - **Result**: Phase 1 checklist items are explicitly covered and documented.
 - **Next task**: Next unfinished backlog item in lexical order.
 - **Commit message**: `docs(phase1): publish checklist audit and harden ingestion metrics/schema`
+
+## 2026-04-17T13:57:31.187Z
+- **Task name**: 0103 — Documentation role separation alignment
+- **Status**: DONE
+- **Summary of changes**:
+  - Rewrote README as concise entry document only.
+  - Added canonical docs for architecture, roadmap, indicator catalog, ingestion design, storage schema, and freshness policy.
+  - Reduced overlapping Phase 1 doc to index form and removed duplicate checklist doc from `/docs`.
+- **Files changed**:
+  - `README.md`
+  - `docs/architecture.md`
+  - `docs/roadmap.md`
+  - `docs/macro_indicator_catalog.md`
+  - `docs/ingestion_design.md`
+  - `docs/storage_schema.md`
+  - `docs/freshness_policy.md`
+  - `docs/phase1_macro_data_foundation.md`
+  - `backlog/0103-docs-role-separation-alignment.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - Documentation role consistency review against policy (README/docs/logs/backlog separation).
+- **Result**: Documentation now follows canonical-source policy with reduced duplication.
+- **Next task**: Next unfinished backlog item in lexical order.
+- **Commit message**: `docs(structure): align repo docs to role-separated canonical policy`

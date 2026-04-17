@@ -14,6 +14,8 @@
 - Extended in-memory feature store to persist raw payload records, normalized observations, and run metadata.
 - Added ingestion throughput metric for raw vs normalized record volumes.
 - Expanded Phase 1 storage schema draft to include raw payload, normalized observation, and ingestion run tables.
+- Reorganized docs to policy-aligned canonical structure (`architecture`, `roadmap`, `macro_indicator_catalog`, `ingestion_design`, `storage_schema`, `freshness_policy`).
+- Simplified README into entry-level quickstart + canonical-doc links.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.
