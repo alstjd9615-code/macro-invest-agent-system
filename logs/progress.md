@@ -256,3 +256,29 @@
 - **Result**: Regime build logic exists and is deterministic for selected as-of dates.
 - **Next task**: `0306-regime_persistence_model.md`
 - **Commit message**: `feat(regime): add regime builder service`
+
+## 2026-04-17T15:17:30.000Z
+- **Task name**: 0306 — Regime persistence model
+- **Status**: DONE
+- **Summary of changes**:
+  - Added regime repository contract and in-memory adapter.
+  - Extended regime service with `build_and_save_regime` and latest retrieval through persistence contract.
+  - Added repository + service persistence tests.
+  - Added canonical persistence doc and storage schema updates for regime layer.
+- **Files changed**:
+  - `core/contracts/macro_regime_repository.py`
+  - `adapters/repositories/in_memory_macro_regime_store.py`
+  - `services/macro_regime_service.py`
+  - `tests/unit/services/test_macro_regime_service.py`
+  - `tests/unit/services/test_in_memory_macro_regime_store.py`
+  - `docs/regime_persistence.md`
+  - `docs/storage_schema.md`
+  - `README.md`
+  - `backlog/0306-regime_persistence_model.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format core\\contracts\\macro_regime_repository.py services\\macro_regime_service.py adapters\\repositories\\in_memory_macro_regime_store.py tests\\unit\\services\\test_macro_regime_service.py tests\\unit\\services\\test_in_memory_macro_regime_store.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\services\\test_macro_regime_service.py tests\\unit\\services\\test_in_memory_macro_regime_store.py -q`
+- **Result**: Regime persistence and retrieval baseline is implemented and tested.
+- **Next task**: `0307-regime_transition_logic.md`
+- **Commit message**: `feat(regime): add regime persistence contract and adapter`

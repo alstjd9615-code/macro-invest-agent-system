@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from core.contracts.macro_regime_repository import MacroRegimeRepositoryContract
 from core.contracts.macro_snapshot_repository import MacroSnapshotRepositoryContract
 from domain.macro.regime import MacroRegime
 from domain.macro.regime_mapping import (
@@ -17,8 +18,13 @@ from domain.macro.regime_mapping import (
 class MacroRegimeService:
     """Build deterministic macro regimes for a selected as-of date."""
 
-    def __init__(self, snapshot_repository: MacroSnapshotRepositoryContract) -> None:
+    def __init__(
+        self,
+        snapshot_repository: MacroSnapshotRepositoryContract,
+        regime_repository: MacroRegimeRepositoryContract | None = None,
+    ) -> None:
         self._snapshot_repository = snapshot_repository
+        self._regime_repository = regime_repository
 
     async def build_regime(self, as_of_date: date) -> MacroRegime:
         snapshot = await self._snapshot_repository.get_latest_on_or_before(as_of_date)
@@ -44,3 +50,15 @@ class MacroRegimeService:
             missing_inputs=derive_regime_missing_inputs(snapshot),
             rationale_summary=build_regime_rationale(snapshot=snapshot, label=label),
         )
+
+    async def build_and_save_regime(self, as_of_date: date) -> MacroRegime:
+        if self._regime_repository is None:
+            raise ValueError("Regime repository is not configured")
+        regime = await self.build_regime(as_of_date=as_of_date)
+        await self._regime_repository.save_regime(regime)
+        return regime
+
+    async def get_latest_regime(self, as_of_date: date) -> MacroRegime | None:
+        if self._regime_repository is None:
+            raise ValueError("Regime repository is not configured")
+        return await self._regime_repository.get_latest_on_or_before(as_of_date)

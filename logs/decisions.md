@@ -53,3 +53,9 @@
 - **Reason**: Current phase prioritizes honest uncertainty handling over speculative precision.
 - **Tradeoff**: Confidence is intentionally conservative; nuanced probabilistic scoring is deferred.
 - **Follow-up**: Reuse these confidence outputs in regime builder and transition services.
+
+## 2026-04-17 — Contract-first persistence for regimes
+- **Decision**: Introduce a dedicated `MacroRegimeRepositoryContract` and keep in-memory adapter as the reference implementation for Phase 3.
+- **Reason**: Builder/transition/API layers need stable persistence semantics before durable storage wiring.
+- **Tradeoff**: Current runtime persistence is non-durable, but contract compatibility is preserved for later DB adapters.
+- **Follow-up**: Add transition-aware save flow and API query layer on top of this repository.

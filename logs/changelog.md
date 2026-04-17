@@ -17,6 +17,8 @@
 - Added canonical confidence policy doc (`docs/regime_confidence_policy.md`).
 - Added regime builder service for as-of-date regime construction from snapshots.
 - Added canonical regime builder doc (`docs/regime_builder.md`).
+- Added macro regime persistence contract and in-memory adapter with latest retrieval.
+- Added canonical regime persistence doc (`docs/regime_persistence.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
@@ -27,6 +29,7 @@
 - Reorganized docs to policy-aligned canonical structure (`architecture`, `roadmap`, `macro_indicator_catalog`, `ingestion_design`, `storage_schema`, `freshness_policy`).
 - Simplified README into entry-level quickstart + canonical-doc links.
 - Added deterministic regime label-to-family mapping and contract-level enforcement for label/family consistency.
+- Updated storage schema docs with Phase 3 regime layer note.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.

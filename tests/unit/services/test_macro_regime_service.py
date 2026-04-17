@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
+from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
 from domain.macro.regime import RegimeConfidence, RegimeLabel
 from domain.macro.snapshot import (
@@ -89,3 +90,38 @@ class TestMacroRegimeService:
         svc = MacroRegimeService(snapshot_repository=InMemoryMacroSnapshotStore())
         with pytest.raises(ValueError, match="No snapshot available"):
             await svc.build_regime(as_of_date=date(2026, 2, 1))
+
+    async def test_build_and_save_persists_regime(self) -> None:
+        snapshot_repo = InMemoryMacroSnapshotStore()
+        regime_repo = InMemoryMacroRegimeStore()
+        await snapshot_repo.save_snapshot(
+            _snapshot(
+                as_of_date=date(2026, 2, 1),
+                growth=GrowthState.ACCELERATING,
+                inflation=InflationState.COOLING,
+                labor=LaborState.TIGHT,
+                policy=PolicyState.NEUTRAL,
+                conditions=FinancialConditionsState.NEUTRAL,
+            )
+        )
+        svc = MacroRegimeService(snapshot_repository=snapshot_repo, regime_repository=regime_repo)
+        saved = await svc.build_and_save_regime(as_of_date=date(2026, 2, 1))
+        latest = await svc.get_latest_regime(as_of_date=date(2026, 2, 1))
+        assert latest is not None
+        assert latest.regime_id == saved.regime_id
+
+    async def test_build_and_save_requires_regime_repository(self) -> None:
+        snapshot_repo = InMemoryMacroSnapshotStore()
+        await snapshot_repo.save_snapshot(
+            _snapshot(
+                as_of_date=date(2026, 2, 1),
+                growth=GrowthState.ACCELERATING,
+                inflation=InflationState.COOLING,
+                labor=LaborState.TIGHT,
+                policy=PolicyState.NEUTRAL,
+                conditions=FinancialConditionsState.NEUTRAL,
+            )
+        )
+        svc = MacroRegimeService(snapshot_repository=snapshot_repo)
+        with pytest.raises(ValueError, match="Regime repository is not configured"):
+            await svc.build_and_save_regime(as_of_date=date(2026, 2, 1))

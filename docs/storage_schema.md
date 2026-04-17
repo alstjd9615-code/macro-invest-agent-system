@@ -9,11 +9,17 @@
 3. **Run layer**  
    Store ingestion execution metadata and counts.
 
+## Regime layer model (Phase 3)
+
+4. **Regime layer**  
+   Store built macro regimes keyed by as-of date, with transition metadata.
+
 ## Canonical model references
 
 - `RawFeatureRecord` — `pipelines/ingestion/models.py`
 - `NormalizedMacroObservation` — `pipelines/ingestion/models.py`
 - `IngestionRunRecord` — `pipelines/ingestion/models.py`
+- `MacroRegime` — `domain/macro/regime.py`
 
 ## Schema draft
 
@@ -27,3 +33,4 @@ This draft documents:
 - `raw_observation_payloads`
 - `normalized_observations`
 - `ingestion_runs`
+- `macro_regimes` (planned durable table; in-memory adapter currently active)
