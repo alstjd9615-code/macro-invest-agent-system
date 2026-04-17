@@ -89,8 +89,14 @@ The platform is designed so that investment decisions are always traceable back 
 macro-invest-agent-platform/
 │
 ├── apps/                          # Runnable application entry points
-│   ├── api/                       # FastAPI application (signal query API)
-│   └── cli/                       # Click/Typer CLI for local runs and backfills
+│   ├── api/                       # FastAPI application (analyst read API)
+│   │   ├── dto/                   # Product-facing DTOs (snapshots, signals, trust metadata)
+│   │   ├── routers/               # Route handlers (snapshots, signals, explanations, sessions)
+│   │   ├── dependencies.py        # FastAPI dependency injection
+│   │   └── main.py                # Application entry point
+│   ├── cli/                       # Click/Typer CLI for local runs and backfills
+│   └── workbench/                 # Streamlit analyst workbench
+│       └── components/            # Snapshot, comparison, signal, trust-badge panels
 │
 ├── core/                          # Cross-cutting infrastructure (no domain logic)
 │   ├── config/
@@ -411,6 +417,15 @@ print(result.signal_direction, result.confidence_score)
 
 - [x] **PR1 — End-to-end tracing**: OpenTelemetry spans across agent → MCP adapter → MCP tools → services → ingestion pipeline; OTel/structlog bridge for log–trace correlation; `core/tracing/` module; updated `docs/observability.md`
 - [x] **PR2/3/4 — Metrics, Alerts, and Deployment**: Prometheus metrics (`core/metrics/`), Grafana dashboard, alert rules, operational runbooks, FastAPI app with `/health` `/readiness` `/metrics` endpoints, updated `docker-compose.yml` with Prometheus + Grafana.
+
+### Phase 6 — Analyst Experience and Visual Surface
+
+- [x] **Read-only FastAPI product surface**: analyst-facing routes under `/api/` — `GET /api/snapshots/latest`, `POST /api/snapshots/compare`, `GET /api/signals/latest`, `GET /api/explanations/{id}`, `GET /api/sessions/{id}`.
+- [x] **Frontend-friendly DTOs and trust metadata**: `apps/api/dto/` with `TrustMetadata`, `FreshnessStatus`, `DataAvailability`, `SourceAttribution`, and response contracts for snapshots, signals, explanations, and sessions.
+- [x] **Structured comparison and signal views**: per-indicator `FeatureDeltaDTO` with `direction`, `delta`, `before/after` values; signal summaries with `rule_results`, `rules_passed`, and trend; `changed_indicators_count` in trust block.
+- [x] **Minimal analyst workbench**: Streamlit app (`apps/workbench/`) with snapshot panel, comparison table, signal panel, trust badges, and loading/empty/error states.
+- [x] **Contract hardening**: 88 new tests covering trust-block presence, empty, partial, degraded, unavailable, and error states; schema-drift guards.
+- See [`docs/phase6_analyst_surface.md`](docs/phase6_analyst_surface.md) for API reference, DTO contracts, and design notes.
 
 ---
 
