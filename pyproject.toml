@@ -74,6 +74,7 @@ ignore = [
     "ANN101", # missing type annotation for self
     "ANN102", # missing type annotation for cls
     "E501",   # line too long (handled by formatter)
+    "B008",   # function call in argument defaults (FastAPI Depends/Query pattern)
 ]
 
 [tool.ruff.lint.isort]

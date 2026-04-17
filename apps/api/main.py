@@ -1,9 +1,14 @@
 """FastAPI application entry point for the macro-invest-agent-platform.
 
 Exposes:
-- ``GET /health``     — liveness probe: confirms the process is alive.
-- ``GET /readiness``  — readiness probe: confirms core dependencies are reachable.
-- ``GET /metrics``    — Prometheus metrics scrape endpoint (text/plain format).
+- ``GET /health``                     — liveness probe.
+- ``GET /readiness``                  — readiness probe.
+- ``GET /metrics``                    — Prometheus metrics scrape endpoint.
+- ``GET /api/snapshots/latest``       — latest macro snapshot (analyst read).
+- ``POST /api/snapshots/compare``     — snapshot comparison (analyst read).
+- ``GET /api/signals/latest``         — latest signal evaluations (analyst read).
+- ``GET /api/explanations/{id}``      — explanation by ID (analyst read).
+- ``GET /api/sessions/{id}``          — session context by ID (analyst read).
 
 Usage::
 
@@ -17,6 +22,10 @@ from __future__ import annotations
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from apps.api.routers import explanations as explanations_router
+from apps.api.routers import sessions as sessions_router
+from apps.api.routers import signals as signals_router
+from apps.api.routers import snapshots as snapshots_router
 from core.config.settings import get_settings
 from core.tracing.tracer import configure_tracing
 
@@ -27,13 +36,26 @@ from core.tracing.tracer import configure_tracing
 app = FastAPI(
     title="macro-invest-agent-platform",
     version="0.1.0",
-    description="Macroeconomic investment agent platform — internal API.",
+    description=(
+        "Macroeconomic investment agent platform — analyst-facing read API. "
+        "Provides read-only access to macro snapshots, signal evaluations, "
+        "explanations, and session context."
+    ),
     docs_url="/docs",
     redoc_url=None,
 )
 
 _settings = get_settings()
 configure_tracing(_settings)
+
+# ---------------------------------------------------------------------------
+# Register analyst-facing routers
+# ---------------------------------------------------------------------------
+
+app.include_router(snapshots_router.router)
+app.include_router(signals_router.router)
+app.include_router(explanations_router.router)
+app.include_router(sessions_router.router)
 
 
 # ---------------------------------------------------------------------------
