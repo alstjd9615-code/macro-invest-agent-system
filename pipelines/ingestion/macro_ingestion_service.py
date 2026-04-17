@@ -28,7 +28,7 @@ from core.contracts.feature_store_repository import FeatureStoreRepositoryContra
 from core.contracts.macro_data_source import MacroDataSourceContract
 from core.exceptions.base import ProviderError
 from core.logging.logger import get_logger
-from core.metrics import PIPELINE_RUN_DURATION, PIPELINE_RUNS_TOTAL
+from core.metrics import INGESTION_OBSERVATIONS_TOTAL, PIPELINE_RUN_DURATION, PIPELINE_RUNS_TOTAL
 from core.tracing import get_tracer
 from core.tracing.span_attributes import (
     COUNTRY,
@@ -163,6 +163,13 @@ class MacroIngestionService:
                     build_normalized_observation(snapshot_id=snapshot.snapshot_id, feature=f)
                     for f in raw_features
                 ]
+
+                INGESTION_OBSERVATIONS_TOTAL.labels(source=source_id, layer="raw").inc(
+                    len(raw_records)
+                )
+                INGESTION_OBSERVATIONS_TOTAL.labels(source=source_id, layer="normalized").inc(
+                    len(normalized_records)
+                )
 
                 await self._repository.save_snapshot(snapshot)
                 if hasattr(self._repository, "save_raw_records"):

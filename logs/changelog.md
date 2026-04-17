@@ -12,6 +12,8 @@
 - Updated default ingestion indicators to a focused Phase 1 starter set.
 - Expanded FRED series mappings for Phase 1 categories and priority indicators.
 - Extended in-memory feature store to persist raw payload records, normalized observations, and run metadata.
+- Added ingestion throughput metric for raw vs normalized record volumes.
+- Expanded Phase 1 storage schema draft to include raw payload, normalized observation, and ingestion run tables.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.

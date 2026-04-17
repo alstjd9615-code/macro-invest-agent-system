@@ -1,4 +1,4 @@
-"""Draft Alembic migration: create feature_snapshots table.
+"""Draft Alembic migration: create Phase 1 ingestion storage tables.
 
 Revision ID: 0001_feature_store_initial
 Revises: (none — first migration)
@@ -12,8 +12,8 @@ recorded here to:
    implementation in ``adapters/repositories/in_memory_feature_store.py``.
 2. Provide a ready-to-activate migration once a database connection is
    configured (SQLAlchemy + psycopg3, as declared in ``pyproject.toml``).
-3. Serve as the authoritative schema reference when extending
-   ``FeatureSnapshot`` with new fields.
+3. Serve as the authoritative schema reference for the Phase 1 layered storage:
+   raw payloads, normalized observations, and ingestion run metadata.
 
 ----------------------------------------------------------------------
 Schema overview
@@ -26,6 +26,46 @@ feature_snapshots
     ingested_at         TIMESTAMPTZ NOT NULL    UTC ingestion timestamp
     features_count      INTEGER NOT NULL >= 0   Derived feature count
     features_json       JSONB NOT NULL          Serialised MacroFeature list
+
+raw_observation_payloads
+    id                  BIGSERIAL PRIMARY KEY
+    snapshot_id         TEXT NOT NULL FK feature_snapshots(snapshot_id)
+    indicator_id        TEXT NOT NULL
+    source_id           TEXT NOT NULL
+    fetched_at          TIMESTAMPTZ NOT NULL
+    payload_json        JSONB NOT NULL
+
+normalized_observations
+    id                  BIGSERIAL PRIMARY KEY
+    snapshot_id         TEXT NOT NULL FK feature_snapshots(snapshot_id)
+    indicator_id        TEXT NOT NULL
+    observation_date    TIMESTAMPTZ NOT NULL
+    release_date        TIMESTAMPTZ NOT NULL
+    fetched_at          TIMESTAMPTZ NOT NULL
+    value               DOUBLE PRECISION NULL
+    unit                TEXT NOT NULL
+    frequency           TEXT NOT NULL
+    source              TEXT NOT NULL
+    source_series_id    TEXT NULL
+    region              TEXT NOT NULL
+    revision_status     TEXT NOT NULL
+    revision_number     INTEGER NOT NULL
+    freshness_status    TEXT NOT NULL
+    freshness_json      JSONB NOT NULL
+
+ingestion_runs
+    run_id              TEXT PRIMARY KEY
+    snapshot_id         TEXT NOT NULL FK feature_snapshots(snapshot_id)
+    source_id           TEXT NOT NULL
+    country             TEXT NOT NULL
+    started_at          TIMESTAMPTZ NOT NULL
+    finished_at         TIMESTAMPTZ NOT NULL
+    requested_indicators JSONB NOT NULL
+    fetched_count       INTEGER NOT NULL
+    normalized_count    INTEGER NOT NULL
+    failed_count        INTEGER NOT NULL
+    success             BOOLEAN NOT NULL
+    error_summary       TEXT NULL
 
 ----------------------------------------------------------------------
 Activation instructions (once a database is configured)
@@ -82,12 +122,12 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """Stub: create the feature_snapshots table."""
+    """Stub: create feature_snapshots/raw_observation_payloads/normalized_observations/ingestion_runs."""
     # Activate by uncommenting the example above and importing alembic.op.
     pass
 
 
 def downgrade() -> None:
-    """Stub: drop the feature_snapshots table."""
+    """Stub: drop Phase 1 ingestion storage tables."""
     # Activate by uncommenting the example above and importing alembic.op.
     pass

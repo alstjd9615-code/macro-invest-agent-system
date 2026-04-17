@@ -60,3 +60,28 @@
 - **Result**: Phase 1 starter ingestion foundation works for priority indicators with test coverage.
 - **Next task**: Next unfinished backlog item in lexical order.
 - **Commit message**: `feat(ingestion): implement phase1 priority data foundation`
+
+## 2026-04-17T13:49:33.136Z
+- **Task name**: 0102 — Phase 1 checklist hardening
+- **Status**: DONE
+- **Summary of changes**:
+  - Added explicit ingestion-throughput metric for raw/normalized layers.
+  - Instrumented ingestion service to emit raw/normalized observation counters.
+  - Extended storage schema draft to document Phase 1 layered persistence tables.
+  - Added checklist audit document with item-by-item completion status.
+- **Files changed**:
+  - `core/metrics/registry.py`
+  - `core/metrics/__init__.py`
+  - `pipelines/ingestion/macro_ingestion_service.py`
+  - `alembic/versions/0001_feature_store_initial.py`
+  - `docs/metrics.md`
+  - `docs/phase1_checklist.md`
+  - `README.md`
+  - `backlog/0102-phase1-checklist-hardening.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format core/metrics/registry.py core/metrics/__init__.py pipelines/ingestion/macro_ingestion_service.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\pipelines\\test_ingestion.py tests\\unit\\pipelines\\test_phase1_foundation.py -q`
+- **Result**: Phase 1 checklist items are explicitly covered and documented.
+- **Next task**: Next unfinished backlog item in lexical order.
+- **Commit message**: `docs(phase1): publish checklist audit and harden ingestion metrics/schema`

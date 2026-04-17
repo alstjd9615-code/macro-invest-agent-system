@@ -554,6 +554,7 @@ The instructions file enforces one-task-at-a-time backlog execution, scoped chan
 Phase 1 implementation details for macro ingestion/normalization live in:
 
 - `docs/phase1_macro_data_foundation.md`
+- `docs/phase1_checklist.md`
 
 Core artifacts:
 

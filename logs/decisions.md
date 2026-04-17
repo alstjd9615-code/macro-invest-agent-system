@@ -11,3 +11,9 @@
 - **Reason**: The phase objective emphasizes reliability of ingestion/normalization over breadth.
 - **Tradeoff**: Coverage is narrower in this task but quality and freshness tracking are testable end-to-end.
 - **Follow-up**: Add remaining Phase 1 indicators in subsequent backlog tasks with the same schema/contracts.
+
+## 2026-04-17 — Checklist-first closure
+- **Decision**: Add a dedicated Phase 1 checklist audit document and explicit ingestion-throughput metric before widening indicator coverage.
+- **Reason**: The immediate request prioritized checklist verification and observable ingestion foundation quality.
+- **Tradeoff**: Added operational/docs artifacts before expanding additional data sources.
+- **Follow-up**: Add alert rules for the new ingestion-throughput metric in a later ops-focused Phase 1 task.

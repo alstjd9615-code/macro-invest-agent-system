@@ -174,6 +174,16 @@ consecutive failures.  See [runbook: pipeline stuck or failing](runbooks/pipelin
 
 ---
 
+### `macro_platform_ingestion_observations_total`
+
+| Property | Value |
+|---|---|
+| Type | Counter |
+| Labels | `source` (e.g. `fred`, `fixture`), `layer` (`raw` \| `normalized`) |
+| Answers | How many raw vs normalized observation records are processed by ingestion? |
+
+---
+
 ## Label cardinality
 
 All labels use bounded enumerable values.  The following labels are **never**

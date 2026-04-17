@@ -127,8 +127,7 @@ PROVIDER_FETCH_DURATION: prom.Histogram = prom.Histogram(
 SIGNAL_GENERATION_DURATION: prom.Histogram = prom.Histogram(
     name="macro_platform_signal_generation_duration_seconds",
     documentation=(
-        "Signal engine run() latency in seconds.  "
-        "Tracks CPU cost of signal evaluation over time."
+        "Signal engine run() latency in seconds.  Tracks CPU cost of signal evaluation over time."
     ),
     labelnames=[],
     buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0),
@@ -159,3 +158,13 @@ PIPELINE_RUN_DURATION: prom.Histogram = prom.Histogram(
     buckets=(0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0),
 )
 """Histogram — end-to-end pipeline run duration per source."""
+
+INGESTION_OBSERVATIONS_TOTAL: prom.Counter = prom.Counter(
+    name="macro_platform_ingestion_observations_total",
+    documentation=(
+        "Total number of ingestion-layer records processed, labelled by source and layer "
+        "(raw|normalized). Useful for monitoring throughput and coverage."
+    ),
+    labelnames=["source", "layer"],
+)
+"""Counter — ingestion throughput for raw and normalized observation records."""
