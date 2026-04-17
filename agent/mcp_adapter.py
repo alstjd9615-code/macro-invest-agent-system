@@ -17,16 +17,19 @@ Callable boundary contract
 
 from __future__ import annotations
 
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
+from core.tracing import get_tracer
+from core.tracing.span_attributes import COUNTRY, MCP_TOOL, REQUEST_ID, RESULT_SUCCESS
 from domain.signals.registry import SignalRegistry, default_registry
 from mcp.schemas.get_macro_features import GetMacroSnapshotRequest, GetMacroSnapshotResponse
 from mcp.schemas.run_signal_engine import RunSignalEngineRequest, RunSignalEngineResponse
 from mcp.tools.get_macro_features import handle_get_macro_snapshot
 from mcp.tools.run_signal_engine import handle_run_signal_engine
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
-from core.logging.logger import get_logger
-from core.logging.timing import timed_operation
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 
 class MCPToolError(Exception):
@@ -91,8 +94,13 @@ class MCPAdapter:
         """
         _log.debug("tool_called", tool="get_macro_snapshot", country=country)
         request = GetMacroSnapshotRequest(request_id=request_id, country=country)
-        async with timed_operation("mcp_adapter", "get_macro_snapshot", _log):
-            response = await handle_get_macro_snapshot(request, self._macro_service)
+        with _tracer.start_as_current_span("mcp_adapter.get_macro_snapshot") as span:
+            span.set_attribute(MCP_TOOL, "get_macro_snapshot")
+            span.set_attribute(REQUEST_ID, request_id)
+            span.set_attribute(COUNTRY, country)
+            async with timed_operation("mcp_adapter", "get_macro_snapshot", _log):
+                response = await handle_get_macro_snapshot(request, self._macro_service)
+            span.set_attribute(RESULT_SUCCESS, response.success)
 
         if not response.success:
             _log.warning(
@@ -131,13 +139,19 @@ class MCPAdapter:
             signal_ids=signal_ids,
             country=country,
         )
-        async with timed_operation("mcp_adapter", "run_signal_engine", _log):
-            response = await handle_run_signal_engine(
-                request=request,
-                macro_service=self._macro_service,
-                signal_service=self._signal_service,
-                registry=self._registry,
-            )
+        with _tracer.start_as_current_span("mcp_adapter.run_signal_engine") as span:
+            span.set_attribute(MCP_TOOL, "run_signal_engine")
+            span.set_attribute(REQUEST_ID, request_id)
+            span.set_attribute(COUNTRY, country)
+            span.set_attribute("signal.ids_count", len(signal_ids))
+            async with timed_operation("mcp_adapter", "run_signal_engine", _log):
+                response = await handle_run_signal_engine(
+                    request=request,
+                    macro_service=self._macro_service,
+                    signal_service=self._signal_service,
+                    registry=self._registry,
+                )
+            span.set_attribute(RESULT_SUCCESS, response.success)
 
         if not response.success:
             _log.warning(

@@ -25,11 +25,20 @@ from __future__ import annotations
 from core.contracts.feature_store_repository import FeatureStoreRepositoryContract
 from core.contracts.macro_data_source import MacroDataSourceContract
 from core.exceptions.base import ProviderError
+from core.logging.logger import get_logger
+from core.tracing import get_tracer
+from core.tracing.span_attributes import (
+    COUNTRY,
+    FEATURES_COUNT,
+    INDICATOR_COUNT,
+    PIPELINE_RUN_ID,
+    SOURCE_ID,
+)
 from domain.macro.enums import MacroIndicatorType
 from pipelines.ingestion.models import FeatureSnapshot
-from core.logging.logger import get_logger
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 # Default set of indicators fetched when the caller does not specify any.
 DEFAULT_INDICATORS: list[str] = [
@@ -102,34 +111,42 @@ class MacroIngestionService:
             indicator_count=len(effective_indicators),
         )
 
-        try:
-            raw_features = await self._source.fetch_raw(
-                country=country, indicators=effective_indicators
-            )
-        except ProviderError as exc:
-            _log.warning(
-                "ingestion_provider_error",
+        with _tracer.start_as_current_span("pipeline.ingest") as span:
+            span.set_attribute(COUNTRY, country)
+            span.set_attribute(SOURCE_ID, self._source.source_id)
+            span.set_attribute(INDICATOR_COUNT, len(effective_indicators))
+
+            try:
+                raw_features = await self._source.fetch_raw(
+                    country=country, indicators=effective_indicators
+                )
+            except ProviderError as exc:
+                _log.warning(
+                    "ingestion_provider_error",
+                    country=country,
+                    source=self._source.source_id,
+                    failure_category=exc.error_code,
+                    error=str(exc),
+                )
+                raise
+
+            if not raw_features:
+                raise RuntimeError(
+                    f"No macro features returned for country={country!r} "
+                    f"from source={self._source.source_id!r}. "
+                    f"Requested indicators: {effective_indicators}"
+                )
+
+            snapshot = FeatureSnapshot(
                 country=country,
-                source=self._source.source_id,
-                failure_category=exc.error_code,
-                error=str(exc),
-            )
-            raise
-
-        if not raw_features:
-            raise RuntimeError(
-                f"No macro features returned for country={country!r} "
-                f"from source={self._source.source_id!r}. "
-                f"Requested indicators: {effective_indicators}"
+                source_id=self._source.source_id,
+                features=raw_features,
             )
 
-        snapshot = FeatureSnapshot(
-            country=country,
-            source_id=self._source.source_id,
-            features=raw_features,
-        )
+            await self._repository.save_snapshot(snapshot)
 
-        await self._repository.save_snapshot(snapshot)
+            span.set_attribute(PIPELINE_RUN_ID, snapshot.snapshot_id)
+            span.set_attribute(FEATURES_COUNT, snapshot.features_count)
 
         _log.info(
             "ingestion_complete",

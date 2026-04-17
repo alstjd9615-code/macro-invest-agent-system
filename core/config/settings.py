@@ -116,6 +116,29 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # OpenTelemetry tracing
+    # ------------------------------------------------------------------
+
+    tracing_enabled: bool = Field(
+        default=False,
+        description="When True, initialise the OpenTelemetry SDK and export traces.",
+    )
+    otlp_endpoint: str = Field(
+        default="http://localhost:4318",
+        description="OTLP HTTP endpoint for trace export (e.g. local Jaeger or Grafana Tempo).",
+    )
+    otel_service_name: str = Field(
+        default="macro-invest-agent-platform",
+        description="OpenTelemetry service.name resource attribute.",
+    )
+    otel_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of traces to sample (0.0–1.0). 1.0 = 100%.",
+    )
+
+    # ------------------------------------------------------------------
     # Convenience helpers
     # ------------------------------------------------------------------
 

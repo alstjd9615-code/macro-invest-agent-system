@@ -397,10 +397,10 @@ print(result.signal_direction, result.confidence_score)
 
 ### Phase 5 — Observability and Operations
 
-- [ ] OpenTelemetry tracing across domain → MCP → agent calls
-- [ ] Metrics export (Prometheus / Grafana)
-- [ ] Alert rules for pipeline failures and signal anomalies
-- [ ] Production deployment manifests (Kubernetes / Helm)
+- [x] **PR1 — End-to-end tracing**: OpenTelemetry spans across agent → MCP adapter → MCP tools → services → ingestion pipeline; OTel/structlog bridge for log–trace correlation; `core/tracing/` module; updated `docs/observability.md`
+- [ ] PR2 — Metrics and dashboards (Prometheus / Grafana)
+- [ ] PR3 — Alert rules and operational runbooks
+- [ ] PR4 — Deployment hardening and operational safety
 
 ---
 

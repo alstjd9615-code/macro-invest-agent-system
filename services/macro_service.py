@@ -9,12 +9,15 @@ placeholder data is returned so that the service layer is always operational.
 from datetime import datetime
 
 from core.contracts.macro_data_source import MacroDataSourceContract
+from core.logging.logger import get_logger
+from core.tracing import get_tracer
+from core.tracing.span_attributes import COUNTRY, FEATURES_COUNT, INDICATOR_COUNT, SOURCE_ID
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
 from services.interfaces import MacroServiceInterface
-from core.logging.logger import get_logger
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 
 class MacroService(MacroServiceInterface):
@@ -66,43 +69,50 @@ class MacroService(MacroServiceInterface):
             source=self._source.source_id if self._source else "synthetic",
         )
 
-        if self._source is not None:
-            _log.debug("source_selected", source=self._source.source_id, country=country)
-            features = await self._source.fetch_raw(country=country, indicators=indicator_types)
+        with _tracer.start_as_current_span("service.fetch_features") as span:
+            span.set_attribute(COUNTRY, country)
+            span.set_attribute(INDICATOR_COUNT, len(indicator_types))
+            span.set_attribute(SOURCE_ID, self._source.source_id if self._source else "synthetic")
+
+            if self._source is not None:
+                _log.debug("source_selected", source=self._source.source_id, country=country)
+                features = await self._source.fetch_raw(country=country, indicators=indicator_types)
+                span.set_attribute(FEATURES_COUNT, len(features))
+                _log.debug(
+                    "service_fetch_complete",
+                    operation="fetch_features",
+                    country=country,
+                    features_returned=len(features),
+                )
+                return features
+
+            # Synthetic fallback (no source configured)
+            features_list: list[MacroFeature] = []
+            for indicator_name in indicator_types:
+                try:
+                    indicator = MacroIndicatorType(indicator_name)
+                    feature = MacroFeature(
+                        indicator_type=indicator,
+                        source=MacroSourceType.MARKET_DATA,
+                        value=50.0,  # Placeholder value
+                        timestamp=datetime.utcnow(),
+                        frequency=DataFrequency.MONTHLY,
+                        country=country,
+                        metadata={"status": "placeholder"},
+                    )
+                    features_list.append(feature)
+                except ValueError:
+                    # Invalid indicator type, skip
+                    continue
+
+            span.set_attribute(FEATURES_COUNT, len(features_list))
             _log.debug(
                 "service_fetch_complete",
                 operation="fetch_features",
                 country=country,
-                features_returned=len(features),
+                features_returned=len(features_list),
             )
-            return features
-
-        # Synthetic fallback (no source configured)
-        features: list[MacroFeature] = []
-        for indicator_name in indicator_types:
-            try:
-                indicator = MacroIndicatorType(indicator_name)
-                feature = MacroFeature(
-                    indicator_type=indicator,
-                    source=MacroSourceType.MARKET_DATA,
-                    value=50.0,  # Placeholder value
-                    timestamp=datetime.utcnow(),
-                    frequency=DataFrequency.MONTHLY,
-                    country=country,
-                    metadata={"status": "placeholder"},
-                )
-                features.append(feature)
-            except ValueError:
-                # Invalid indicator type, skip
-                continue
-
-        _log.debug(
-            "service_fetch_complete",
-            operation="fetch_features",
-            country=country,
-            features_returned=len(features),
-        )
-        return features
+            return features_list
 
     async def get_snapshot(self, country: str = "US") -> MacroSnapshot:
         """Get a complete macro snapshot at current time.
@@ -121,42 +131,47 @@ class MacroService(MacroServiceInterface):
         """
         _log.debug("service_fetch_started", operation="get_snapshot", country=country)
 
-        if self._source is not None:
-            # Fetch all indicators the source supports
-            source_meta = self._source.metadata
-            if source_meta and source_meta.supported_indicators:
-                all_indicators = list(source_meta.supported_indicators)
+        with _tracer.start_as_current_span("service.get_snapshot") as span:
+            span.set_attribute(COUNTRY, country)
+            span.set_attribute(SOURCE_ID, self._source.source_id if self._source else "synthetic")
+
+            if self._source is not None:
+                # Fetch all indicators the source supports
+                source_meta = self._source.metadata
+                if source_meta and source_meta.supported_indicators:
+                    all_indicators = list(source_meta.supported_indicators)
+                else:
+                    # Source has no metadata or empty indicator set — use common defaults
+                    all_indicators = [
+                        MacroIndicatorType.GDP.value,
+                        MacroIndicatorType.INFLATION.value,
+                        MacroIndicatorType.UNEMPLOYMENT.value,
+                    ]
+                try:
+                    features = await self.fetch_features(all_indicators, country)
+                except ValueError as exc:
+                    raise RuntimeError(f"Could not fetch macro data for {country}") from exc
             else:
-                # Source has no metadata or empty indicator set — use common defaults
-                all_indicators = [
+                # Synthetic fallback — fetch common indicators
+                common_indicators = [
                     MacroIndicatorType.GDP.value,
                     MacroIndicatorType.INFLATION.value,
                     MacroIndicatorType.UNEMPLOYMENT.value,
                 ]
-            try:
-                features = await self.fetch_features(all_indicators, country)
-            except ValueError:
+                features = await self.fetch_features(common_indicators, country)
+
+            if not features:
                 raise RuntimeError(f"Could not fetch macro data for {country}")
-        else:
-            # Synthetic fallback — fetch common indicators
-            common_indicators = [
-                MacroIndicatorType.GDP.value,
-                MacroIndicatorType.INFLATION.value,
-                MacroIndicatorType.UNEMPLOYMENT.value,
-            ]
-            features = await self.fetch_features(common_indicators, country)
 
-        if not features:
-            raise RuntimeError(f"Could not fetch macro data for {country}")
-
-        _log.debug(
-            "service_fetch_complete",
-            operation="get_snapshot",
-            country=country,
-            features_count=len(features),
-        )
-        return MacroSnapshot(
-            features=features,
-            snapshot_time=datetime.utcnow(),
-            version=1,
-        )
+            span.set_attribute(FEATURES_COUNT, len(features))
+            _log.debug(
+                "service_fetch_complete",
+                operation="get_snapshot",
+                country=country,
+                features_count=len(features),
+            )
+            return MacroSnapshot(
+                features=features,
+                snapshot_time=datetime.utcnow(),
+                version=1,
+            )

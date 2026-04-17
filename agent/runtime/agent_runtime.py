@@ -39,8 +39,16 @@ from agent.schemas import (
 from agent.service import AgentService
 from core.logging.logger import bind_request_context, get_logger, set_trace_id
 from core.logging.timing import timed_operation
+from core.tracing import get_tracer
+from core.tracing.span_attributes import (
+    AGENT_OPERATION,
+    REQUEST_ID,
+    RESULT_SUCCESS,
+    SESSION_ID,
+)
 
 _log = get_logger(__name__)
+_tracer = get_tracer(__name__)
 
 # ---------------------------------------------------------------------------
 # Operation registry
@@ -187,12 +195,29 @@ class AgentRuntime:
         )
         _log.info("request_started", request_type=type(request).__name__)
 
-        if isinstance(request, SignalReviewRequest):
-            result = await self._invoke_review_signals(request)
-        elif isinstance(request, MacroSnapshotSummaryRequest):
-            result = await self._invoke_summarize_snapshot(request)
-        else:
-            result = await self._invoke_compare_snapshots(request)
+        operation = (
+            AgentOperation.REVIEW_SIGNALS
+            if isinstance(request, SignalReviewRequest)
+            else AgentOperation.SUMMARIZE_MACRO_SNAPSHOT
+            if isinstance(request, MacroSnapshotSummaryRequest)
+            else AgentOperation.COMPARE_SNAPSHOTS
+        )
+
+        with _tracer.start_as_current_span("agent.invoke") as span:
+            span.set_attribute(REQUEST_ID, request.request_id)
+            span.set_attribute(AGENT_OPERATION, operation.value)
+            session_id = getattr(request, "session_id", None) or ""
+            if session_id:
+                span.set_attribute(SESSION_ID, session_id)
+
+            if isinstance(request, SignalReviewRequest):
+                result = await self._invoke_review_signals(request)
+            elif isinstance(request, MacroSnapshotSummaryRequest):
+                result = await self._invoke_summarize_snapshot(request)
+            else:
+                result = await self._invoke_compare_snapshots(request)
+
+            span.set_attribute(RESULT_SUCCESS, result.success)
 
         _log.info(
             "request_completed",
