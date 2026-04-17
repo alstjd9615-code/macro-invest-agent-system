@@ -1,7 +1,9 @@
 """Service layer interface contracts."""
 
 from abc import ABC, abstractmethod
+from datetime import date
 
+from domain.macro.regime import MacroRegime
 from domain.macro.models import MacroFeature, MacroSnapshot
 from domain.signals.models import SignalDefinition, SignalResult
 
@@ -102,3 +104,25 @@ class SignalServiceInterface(ABC):
             ValueError: If signal definitions are invalid
             RuntimeError: If engine execution fails
         """
+
+
+class RegimeServiceInterface(ABC):
+    """Interface for macro regime build/query flows."""
+
+    @abstractmethod
+    async def build_regime(self, as_of_date: date) -> MacroRegime:
+        """Build a regime from latest snapshot on/before the as-of date."""
+
+    @abstractmethod
+    async def build_and_save_regime(self, as_of_date: date) -> MacroRegime:
+        """Build and persist regime for the as-of date."""
+
+    @abstractmethod
+    async def get_latest_regime(self, as_of_date: date) -> MacroRegime | None:
+        """Load latest persisted regime on/before as-of date."""
+
+    @abstractmethod
+    async def compare_latest_with_prior(
+        self, as_of_date: date
+    ) -> tuple[MacroRegime, MacroRegime | None]:
+        """Load current regime plus previous baseline regime."""

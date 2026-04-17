@@ -23,7 +23,14 @@ from functools import lru_cache
 
 from fastapi import Depends
 
-from services.interfaces import MacroServiceInterface, SignalServiceInterface
+from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
+from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
+from services.interfaces import (
+    MacroServiceInterface,
+    RegimeServiceInterface,
+    SignalServiceInterface,
+)
+from services.macro_regime_service import MacroRegimeService
 from services.macro_service import MacroService
 from services.signal_service import SignalService
 
@@ -38,6 +45,15 @@ def _macro_service_singleton() -> MacroService:
 def _signal_service_singleton() -> SignalService:
     """Return a cached :class:`~services.signal_service.SignalService` instance."""
     return SignalService()
+
+
+@lru_cache(maxsize=1)
+def _regime_service_singleton() -> MacroRegimeService:
+    """Return a cached phase-3 regime service with in-memory repositories."""
+    return MacroRegimeService(
+        snapshot_repository=InMemoryMacroSnapshotStore(),
+        regime_repository=InMemoryMacroRegimeStore(),
+    )
 
 
 def get_macro_service() -> MacroServiceInterface:
@@ -58,5 +74,10 @@ def get_signal_service() -> SignalServiceInterface:
     return _signal_service_singleton()
 
 
+def get_regime_service() -> RegimeServiceInterface:
+    """FastAPI dependency: provide the regime service."""
+    return _regime_service_singleton()
+
+
 # Re-export for convenience
-__all__ = ["get_macro_service", "get_signal_service", "Depends"]
+__all__ = ["get_macro_service", "get_signal_service", "get_regime_service", "Depends"]

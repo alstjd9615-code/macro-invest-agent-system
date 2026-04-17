@@ -67,3 +67,17 @@ class MacroRegimeService:
         if self._regime_repository is None:
             raise ValueError("Regime repository is not configured")
         return await self._regime_repository.get_latest_on_or_before(as_of_date)
+
+    async def compare_latest_with_prior(
+        self,
+        as_of_date: date,
+    ) -> tuple[MacroRegime, MacroRegime | None]:
+        if self._regime_repository is None:
+            raise ValueError("Regime repository is not configured")
+        current = await self._regime_repository.get_latest_on_or_before(as_of_date)
+        if current is None:
+            raise ValueError(f"No regime available on or before {as_of_date.isoformat()}")
+        previous = await self._regime_repository.get_latest_on_or_before(
+            current.as_of_date - timedelta(days=1)
+        )
+        return current, previous

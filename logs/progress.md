@@ -307,3 +307,31 @@
 - **Result**: Current-vs-prior regime transitions are deterministic and persisted with regimes.
 - **Next task**: `0308-regime_api_contract.md`
 - **Commit message**: `feat(regime): add deterministic regime transition logic`
+
+## 2026-04-17T15:27:40.000Z
+- **Task name**: 0308 — Regime API contract
+- **Status**: DONE
+- **Summary of changes**:
+  - Added regime DTOs and read routers (`/api/regimes/latest`, `/api/regimes/compare`).
+  - Added regime dependency provider and router registration in FastAPI app.
+  - Added regime API tests with dependency overrides.
+  - Added canonical regime API contract doc.
+- **Files changed**:
+  - `apps/api/dto/regimes.py`
+  - `apps/api/routers/regimes.py`
+  - `apps/api/dependencies.py`
+  - `apps/api/main.py`
+  - `services/interfaces.py`
+  - `services/__init__.py`
+  - `services/macro_regime_service.py`
+  - `tests/unit/api/test_regimes_router.py`
+  - `docs/regime_api_contract.md`
+  - `README.md`
+  - `backlog/0308-regime_api_contract.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format apps\\api\\dependencies.py apps\\api\\main.py apps\\api\\routers\\regimes.py apps\\api\\dto\\regimes.py services\\interfaces.py services\\__init__.py services\\macro_regime_service.py tests\\unit\\api\\test_regimes_router.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_regimes_router.py tests\\unit\\api\\test_contract.py -q`
+- **Result**: Regime read API contract is implemented and test-covered.
+- **Next task**: `0309-regime_docs_cleanup.md`
+- **Commit message**: `feat(api): add regime read contract endpoints`

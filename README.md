@@ -63,5 +63,6 @@ docker compose up -d
 - Regime builder: `docs/regime_builder.md`
 - Regime persistence: `docs/regime_persistence.md`
 - Regime transition rules: `docs/regime_transition_rules.md`
+- Regime API contract: `docs/regime_api_contract.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

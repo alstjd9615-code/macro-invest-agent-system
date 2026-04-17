@@ -65,3 +65,9 @@
 - **Reason**: Label shifts carry stronger macro meaning and should dominate transition classification.
 - **Tradeoff**: Intra-label nuances are compressed into strengthening/weakening only.
 - **Follow-up**: Keep transition output stable for API consumers and later analytics.
+
+## 2026-04-17 — Regime API read-only shape
+- **Decision**: Expose Phase 3 regime outputs via read-only endpoints for latest and comparison views.
+- **Reason**: Analysts need inspectable regime/transition state without introducing write-side workflow complexity.
+- **Tradeoff**: API currently serves persisted regimes only; build triggering remains service-side.
+- **Follow-up**: Add explicit build orchestration endpoint only if backlog requires write actions.

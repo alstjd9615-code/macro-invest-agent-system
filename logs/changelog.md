@@ -21,6 +21,8 @@
 - Added canonical regime persistence doc (`docs/regime_persistence.md`).
 - Added deterministic regime transition logic and transition service wiring.
 - Added canonical regime transition rules doc (`docs/regime_transition_rules.md`).
+- Added regime API DTOs and read routes (`/api/regimes/latest`, `/api/regimes/compare`).
+- Added canonical regime API contract doc (`docs/regime_api_contract.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

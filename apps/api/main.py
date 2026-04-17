@@ -7,6 +7,8 @@ Exposes:
 - ``GET /api/snapshots/latest``       — latest macro snapshot (analyst read).
 - ``POST /api/snapshots/compare``     — snapshot comparison (analyst read).
 - ``GET /api/signals/latest``         — latest signal evaluations (analyst read).
+- ``GET /api/regimes/latest``         — latest persisted macro regime (analyst read).
+- ``GET /api/regimes/compare``        — current-vs-prior regime transition (analyst read).
 - ``GET /api/explanations/{id}``      — explanation by ID (analyst read).
 - ``GET /api/sessions/{id}``          — session context by ID (analyst read).
 
@@ -23,6 +25,7 @@ from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from apps.api.routers import explanations as explanations_router
+from apps.api.routers import regimes as regimes_router
 from apps.api.routers import sessions as sessions_router
 from apps.api.routers import signals as signals_router
 from apps.api.routers import snapshots as snapshots_router
@@ -56,6 +59,7 @@ app.include_router(snapshots_router.router)
 app.include_router(signals_router.router)
 app.include_router(explanations_router.router)
 app.include_router(sessions_router.router)
+app.include_router(regimes_router.router)
 
 
 # ---------------------------------------------------------------------------
