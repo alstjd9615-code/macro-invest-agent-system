@@ -354,3 +354,20 @@
 - **Result**: Phase 3 docs now have a single canonical entry point with reduced overlap.
 - **Next task**: `0310-phase3_tests_and_validation.md`
 - **Commit message**: `docs(regime): consolidate canonical phase3 docs index`
+
+## 2026-04-17T15:33:45.000Z
+- **Task name**: 0310 — Phase 3 tests and validation
+- **Status**: DONE
+- **Summary of changes**:
+  - Added end-to-end regime flow test covering build -> persist -> compare.
+  - Ran consolidated Phase 3 regime domain/service/api validation suite.
+- **Files changed**:
+  - `tests/unit/services/test_macro_regime_end_to_end.py`
+  - `backlog/0310-phase3_tests_and_validation.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format tests\\unit\\services\\test_macro_regime_end_to_end.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_schema.py tests\\unit\\domain\\macro\\test_regime_mapping.py tests\\unit\\domain\\macro\\test_regime_confidence.py tests\\unit\\domain\\macro\\test_regime_transition.py tests\\unit\\services\\test_in_memory_macro_regime_store.py tests\\unit\\services\\test_macro_regime_service.py tests\\unit\\services\\test_macro_regime_end_to_end.py tests\\unit\\api\\test_regimes_router.py -q`
+- **Result**: Phase 3 implementation is covered end-to-end across domain, service, persistence, and API layers.
+- **Next task**: Phase 3 backlog complete.
+- **Commit message**: `test(regime): add phase3 end-to-end validation coverage`

@@ -24,6 +24,7 @@
 - Added regime API DTOs and read routes (`/api/regimes/latest`, `/api/regimes/compare`).
 - Added canonical regime API contract doc (`docs/regime_api_contract.md`).
 - Added canonical Phase 3 regime docs index (`docs/regime_engine.md`).
+- Added Phase 3 end-to-end regime flow test coverage.
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
