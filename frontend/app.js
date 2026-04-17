@@ -7,6 +7,10 @@ const signalsTrust = document.getElementById("signals-trust");
 const explanationTrust = document.getElementById("explanation-trust");
 const explanationSummary = document.getElementById("explanation-summary");
 const explanationPoints = document.getElementById("explanation-points");
+const regimeLatestStatus = document.getElementById("regime-latest-status");
+const regimeLatestGrid = document.getElementById("regime-latest-grid");
+const regimeCompareStatus = document.getElementById("regime-compare-status");
+const regimeCompareGrid = document.getElementById("regime-compare-grid");
 
 let latestSnapshot = null;
 let latestSignals = null;
@@ -26,6 +30,19 @@ function formatNumber(value) {
     return "-";
   }
   return Number(value).toFixed(3);
+}
+
+function renderKvGrid(element, pairs) {
+  element.innerHTML = pairs
+    .map(
+      (pair) => `
+      <div class="kv-item">
+        <span class="kv-key">${pair.key}</span>
+        <span class="kv-value">${pair.value ?? "-"}</span>
+      </div>
+    `,
+    )
+    .join("");
 }
 
 async function getJson(path, options = undefined) {
@@ -125,6 +142,42 @@ async function loadSignals() {
   renderSignals(latestSignals);
 }
 
+async function loadRegimeLatest() {
+  try {
+    const regime = await getJson("/api/regimes/latest");
+    regimeLatestStatus.textContent = `as_of=${regime.as_of_date} | freshness=${regime.freshness_status} | degraded=${regime.degraded_status}`;
+    renderKvGrid(regimeLatestGrid, [
+      { key: "Label", value: regime.regime_label },
+      { key: "Family", value: regime.regime_family },
+      { key: "Confidence", value: regime.confidence },
+      { key: "Transition Type", value: regime.transition?.transition_type },
+      { key: "Changed", value: String(regime.transition?.changed) },
+      { key: "Missing Inputs", value: (regime.missing_inputs || []).join(", ") || "none" },
+    ]);
+  } catch (error) {
+    regimeLatestStatus.textContent = "No persisted regime available yet";
+    regimeLatestGrid.innerHTML = "";
+  }
+}
+
+async function loadRegimeCompare() {
+  try {
+    const compare = await getJson("/api/regimes/compare");
+    regimeCompareStatus.textContent = `as_of=${compare.as_of_date} | baseline_available=${compare.baseline_available}`;
+    renderKvGrid(regimeCompareGrid, [
+      { key: "Current Label", value: compare.current_regime_label },
+      { key: "Prior Label", value: compare.prior_regime_label || "-" },
+      { key: "Transition Type", value: compare.transition_type },
+      { key: "Changed", value: String(compare.changed) },
+      { key: "Current Confidence", value: compare.current_confidence },
+      { key: "Prior Confidence", value: compare.prior_confidence || "-" },
+    ]);
+  } catch {
+    regimeCompareStatus.textContent = "No regime comparison baseline available yet";
+    regimeCompareGrid.innerHTML = "";
+  }
+}
+
 async function loadExplanation() {
   if (!latestSignals) {
     await loadSignals();
@@ -153,6 +206,8 @@ async function loadAll() {
   try {
     await loadSnapshot();
     await loadCompare();
+    await loadRegimeLatest();
+    await loadRegimeCompare();
     await loadSignals();
     await loadExplanation();
   } catch (error) {
@@ -172,6 +227,14 @@ document.getElementById("run-compare").addEventListener("click", () => {
 document.getElementById("refresh-signals").addEventListener("click", async () => {
   await loadSignals();
   await loadExplanation();
+});
+
+document.getElementById("refresh-regime").addEventListener("click", async () => {
+  await loadRegimeLatest();
+});
+
+document.getElementById("refresh-regime-compare").addEventListener("click", async () => {
+  await loadRegimeCompare();
 });
 
 loadAll();

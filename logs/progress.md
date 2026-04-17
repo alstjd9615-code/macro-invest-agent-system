@@ -398,3 +398,20 @@
   - `uv run ruff format apps\\api\\main.py apps\\api\\routers\\snapshots.py apps\\api\\routers\\signals.py apps\\api\\routers\\explanations.py`
   - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_snapshots_router.py tests\\unit\\api\\test_signals_router.py tests\\unit\\api\\test_explanations_router.py -q`
 - **Result**: Repository labels/docs now better match actual maturity; legacy edges are explicitly contained as experimental.
+
+## 2026-04-17T15:31:39.241Z
+- **Task name**: Frontend update (regime-first visibility)
+- **Status**: DONE
+- **Summary of changes**:
+  - Added `Latest Regime` and `Regime Transition` sections to frontend dashboard.
+  - Wired frontend to `/api/regimes/latest` and `/api/regimes/compare`.
+  - Kept legacy signal/explanation sections explicitly experimental.
+- **Files changed**:
+  - `frontend/index.html`
+  - `frontend/app.js`
+  - `frontend/styles.css`
+  - `logs/changelog.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_regimes_router.py tests\\unit\\api\\test_snapshots_router.py tests\\unit\\api\\test_signals_router.py -q`
+- **Result**: Frontend now reflects current Phase 3 core state first, with experimental legacy surfaces still contained.

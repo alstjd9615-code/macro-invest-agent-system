@@ -42,6 +42,7 @@
 - Updated snapshot API wording toward observation-table semantics.
 - Corrected deployment docs to reflect containerized API/frontend services.
 - Updated README/roadmap status wording for post-Phase-3 baseline state.
+- Updated frontend dashboard to surface Phase 3 regime latest/transition panels while keeping signals/explanations explicitly experimental.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.
