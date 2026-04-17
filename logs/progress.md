@@ -138,3 +138,28 @@
 - **Result**: Phase 2 snapshot contract/builder/comparison baseline is implemented and tested.
 - **Next task**: Next unfinished Phase 2 backlog item in lexical order.
 - **Commit message**: `feat(snapshot): add phase2 snapshot contract builder and comparison baseline`
+
+## 2026-04-17T14:54:14.517Z
+- **Task name**: 0301 — Regime schema definition
+- **Status**: DONE
+- **Summary of changes**:
+  - Added canonical regime domain contract (`MacroRegime`) with label/family/confidence/freshness/degraded/transition fields.
+  - Added regime vocab enums and transition metadata model.
+  - Exported regime contracts through `domain.macro`.
+  - Added canonical regime schema documentation.
+  - Updated roadmap/README phase status and canonical doc links.
+- **Files changed**:
+  - `domain/macro/regime.py`
+  - `domain/macro/__init__.py`
+  - `tests/unit/domain/macro/test_regime_schema.py`
+  - `docs/regime_schema.md`
+  - `docs/roadmap.md`
+  - `README.md`
+  - `backlog/0301-regime_schema_definition.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format domain/macro/regime.py domain/macro/__init__.py tests/unit/domain/macro/test_regime_schema.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_schema.py tests\\unit\\domain\\macro\\test_snapshot.py -q`
+- **Result**: Phase 3 regime schema contract baseline is implemented and validated.
+- **Next task**: `0302-regime_vocabulary_definition.md` (when present in backlog).
+- **Commit message**: `feat(regime): define macro regime schema contract`

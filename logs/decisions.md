@@ -29,3 +29,9 @@
 - **Reason**: Current stage prioritizes truthful domain contracts over surface/API expansion.
 - **Tradeoff**: Snapshot logic is currently service/domain-centric and not yet expanded into broader product surfaces.
 - **Follow-up**: Add next Phase 2 backlog tasks for API contract wiring only after domain/persistence coverage is stable.
+
+## 2026-04-17 — Phase 3 contract-first start
+- **Decision**: Start Phase 3 with explicit regime schema/vocabulary contracts before any mapping/builder/API expansion.
+- **Reason**: Policy prioritizes canonical truth and reviewable contracts over surface completeness.
+- **Tradeoff**: Regime outputs are not yet mapped/built; only schema layer is complete in this task.
+- **Follow-up**: Implement deterministic snapshot→regime mapping in 0302/0303 tasks.

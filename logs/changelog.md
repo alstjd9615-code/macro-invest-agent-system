@@ -9,6 +9,7 @@
 - Added `docs/phase1_macro_data_foundation.md`.
 - Added Phase 2 snapshot contract, builder service, in-memory snapshot repository, and comparison metadata baseline.
 - Added canonical docs: `docs/snapshot_schema.md`, `docs/state_derivation_rules.md`.
+- Added Phase 3 regime schema contracts and canonical regime schema doc.
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

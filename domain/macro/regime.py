@@ -1,0 +1,75 @@
+"""Phase 3 macro regime schema and vocabulary contracts."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, date, datetime
+from enum import StrEnum
+
+from pydantic import BaseModel, Field
+
+from domain.macro.snapshot import DegradedStatus
+from pipelines.ingestion.models import FreshnessStatus
+
+
+class RegimeLabel(StrEnum):
+    GOLDILOCKS = "goldilocks"
+    DISINFLATION = "disinflation"
+    SLOWDOWN = "slowdown"
+    REFLATION = "reflation"
+    STAGFLATION_RISK = "stagflation_risk"
+    CONTRACTION = "contraction"
+    POLICY_TIGHTENING_DRAG = "policy_tightening_drag"
+    MIXED = "mixed"
+    UNCLEAR = "unclear"
+
+
+class RegimeFamily(StrEnum):
+    EXPANSION = "expansion"
+    INFLATION_TRANSITION = "inflation_transition"
+    LATE_CYCLE = "late_cycle"
+    DOWNSHIFT = "downshift"
+    CONTRACTION = "contraction"
+    UNCERTAIN = "uncertain"
+
+
+class RegimeConfidence(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class RegimeTransitionType(StrEnum):
+    INITIAL = "initial"
+    UNCHANGED = "unchanged"
+    SHIFT = "shift"
+    WEAKENING = "weakening"
+    STRENGTHENING = "strengthening"
+    UNKNOWN = "unknown"
+
+
+class RegimeTransition(BaseModel, extra="forbid"):
+    transition_from_prior: str | None = Field(default=None, description="Prior regime label")
+    transition_type: RegimeTransitionType = Field(default=RegimeTransitionType.UNKNOWN)
+    changed: bool = Field(default=False)
+
+
+class MacroRegime(BaseModel, extra="forbid"):
+    """Structured macro regime contract for a given as-of date."""
+
+    regime_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    as_of_date: date
+    regime_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    regime_label: RegimeLabel = Field(default=RegimeLabel.UNCLEAR)
+    regime_family: RegimeFamily = Field(default=RegimeFamily.UNCERTAIN)
+    supporting_snapshot_id: str = Field(..., min_length=1)
+    supporting_states: dict[str, str] = Field(default_factory=dict)
+
+    confidence: RegimeConfidence = Field(default=RegimeConfidence.LOW)
+    freshness_status: FreshnessStatus = Field(default=FreshnessStatus.UNKNOWN)
+    degraded_status: DegradedStatus = Field(default=DegradedStatus.UNKNOWN)
+    missing_inputs: list[str] = Field(default_factory=list)
+
+    transition: RegimeTransition = Field(default_factory=RegimeTransition)
+    rationale_summary: str = Field(default="")
