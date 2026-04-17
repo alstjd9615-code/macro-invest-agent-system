@@ -15,8 +15,6 @@ Design constraints
 
 from __future__ import annotations
 
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from apps.api.dependencies import get_macro_service, get_signal_service
@@ -138,6 +136,3 @@ async def get_latest_signals(
         strongest_signal_id=strongest_id,
         trust=trust,
     )
-
-
-_ = uuid  # suppress unused import

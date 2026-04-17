@@ -25,7 +25,7 @@ import streamlit as st
 from apps.workbench.components.comparison_table import render_comparison_table
 from apps.workbench.components.signal_panel import render_signal_panel
 from apps.workbench.components.snapshot_panel import render_snapshot_panel
-from apps.workbench.components.states import render_empty, render_error, render_loading
+from apps.workbench.components.states import render_empty, render_error
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -176,7 +176,3 @@ if show_comparison:
 
 st.markdown("---")
 st.caption("⚠️ Read-only workbench — no write actions.  Data sourced from deterministic domain layer.")
-
-
-# Make render_loading available to components for conditional use
-_ = render_loading

@@ -144,7 +144,7 @@ class TestSnapshotLatest:
         resp = client.get("/api/snapshots/latest", params={"country": "US"})
         labels = [f["indicator_label"] for f in resp.json()["features"]]
         # Should be title-case readable, not raw enum strings
-        assert "GDP Growth" in labels or any(len(l) > 3 for l in labels)  # noqa: E741
+        assert "GDP Growth" in labels or any(len(label) > 3 for label in labels)
 
 
 # ---------------------------------------------------------------------------

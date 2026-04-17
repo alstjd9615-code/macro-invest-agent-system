@@ -18,8 +18,6 @@ Design constraints
 
 from __future__ import annotations
 
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from apps.api.dependencies import get_macro_service
@@ -144,7 +142,3 @@ async def compare_snapshot(
         no_prior_count=comparison.no_prior_count,
         trust=trust,
     )
-
-
-# Suppress unused import warning — uuid is used for future request_id generation
-_ = uuid
