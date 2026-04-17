@@ -29,6 +29,8 @@ _FIXTURE_VALUES: dict[MacroIndicatorType, float] = {
     MacroIndicatorType.GDP: 25_000.0,
     MacroIndicatorType.INFLATION: 3.2,
     MacroIndicatorType.UNEMPLOYMENT: 4.1,
+    MacroIndicatorType.YIELD_10Y: 4.6,
+    MacroIndicatorType.RETAIL_SALES: 720_000.0,
     MacroIndicatorType.INTEREST_RATE: 5.25,
     MacroIndicatorType.EXCHANGE_RATE: 1.0,
     MacroIndicatorType.STOCK_INDEX: 4_500.0,

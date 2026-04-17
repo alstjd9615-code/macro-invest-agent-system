@@ -22,6 +22,8 @@ Design principles
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from core.contracts.feature_store_repository import FeatureStoreRepositoryContract
 from core.contracts.macro_data_source import MacroDataSourceContract
 from core.exceptions.base import ProviderError
@@ -35,20 +37,19 @@ from core.tracing.span_attributes import (
     PIPELINE_RUN_ID,
     SOURCE_ID,
 )
-from domain.macro.enums import MacroIndicatorType
-from pipelines.ingestion.models import FeatureSnapshot
+from pipelines.ingestion.indicator_catalog import PRIORITY_INDICATORS
+from pipelines.ingestion.models import (
+    FeatureSnapshot,
+    IngestionRunRecord,
+    RawFeatureRecord,
+    build_normalized_observation,
+)
 
 _log = get_logger(__name__)
 _tracer = get_tracer(__name__)
 
 # Default set of indicators fetched when the caller does not specify any.
-DEFAULT_INDICATORS: list[str] = [
-    MacroIndicatorType.GDP.value,
-    MacroIndicatorType.INFLATION.value,
-    MacroIndicatorType.UNEMPLOYMENT.value,
-    MacroIndicatorType.INTEREST_RATE.value,
-    MacroIndicatorType.BOND_YIELD.value,
-]
+DEFAULT_INDICATORS: list[str] = [i.value for i in PRIORITY_INDICATORS]
 
 
 class MacroIngestionService:
@@ -113,6 +114,7 @@ class MacroIngestionService:
             indicator_count=len(effective_indicators),
         )
 
+        run_started_at = datetime.now(UTC)
         with _tracer.start_as_current_span("pipeline.ingest") as span:
             span.set_attribute(COUNTRY, country)
             span.set_attribute(SOURCE_ID, source_id)
@@ -148,7 +150,41 @@ class MacroIngestionService:
                     features=raw_features,
                 )
 
+                raw_records = [
+                    RawFeatureRecord(
+                        snapshot_id=snapshot.snapshot_id,
+                        indicator_type=f.indicator_type,
+                        source_id=source_id,
+                        raw_payload={k: str(v) for k, v in f.metadata.items()},
+                    )
+                    for f in raw_features
+                ]
+                normalized_records = [
+                    build_normalized_observation(snapshot_id=snapshot.snapshot_id, feature=f)
+                    for f in raw_features
+                ]
+
                 await self._repository.save_snapshot(snapshot)
+                if hasattr(self._repository, "save_raw_records"):
+                    await self._repository.save_raw_records(snapshot.snapshot_id, raw_records)
+                if hasattr(self._repository, "save_normalized_records"):
+                    await self._repository.save_normalized_records(
+                        snapshot.snapshot_id, normalized_records
+                    )
+                if hasattr(self._repository, "save_ingestion_run"):
+                    run_record = IngestionRunRecord(
+                        snapshot_id=snapshot.snapshot_id,
+                        source_id=source_id,
+                        country=country,
+                        started_at=run_started_at,
+                        finished_at=datetime.now(UTC),
+                        requested_indicators=effective_indicators,
+                        fetched_count=len(raw_features),
+                        normalized_count=len(normalized_records),
+                        failed_count=0,
+                        success=True,
+                    )
+                    await self._repository.save_ingestion_run(run_record)
 
             span.set_attribute(PIPELINE_RUN_ID, snapshot.snapshot_id)
             span.set_attribute(FEATURES_COUNT, snapshot.features_count)

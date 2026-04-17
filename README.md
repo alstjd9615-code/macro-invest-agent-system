@@ -15,6 +15,8 @@
 7. [MCP Tool Overview](#7-mcp-tool-overview)
 8. [Roadmap](#8-roadmap)
 9. [Troubleshooting](#9-troubleshooting)
+10. [Copilot Agent Automation](#10-copilot-agent-automation)
+11. [Phase 1 Data Foundation](#11-phase-1-data-foundation)
 
 ---
 
@@ -206,11 +208,20 @@ Edit `.env` and fill in any required values. See [.env.example](.env.example) fo
 docker compose up -d
 ```
 
-This brings up PostgreSQL and MinIO. Wait for the health checks to pass:
+This brings up PostgreSQL, MinIO, the FastAPI API service, Prometheus, Grafana, and the minimal frontend dashboard. Wait for health checks to pass:
 
 ```bash
 docker compose ps
 ```
+
+Key local endpoints:
+
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- API health: http://localhost:8000/health
+- Frontend dashboard: http://localhost:8080
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
 
 ### Step 5 — Run database migrations
 
@@ -523,3 +534,31 @@ If a third-party library has no stubs, add it to `[[tool.mypy.overrides]]` in `p
 module = "some_untyped_library.*"
 ignore_missing_imports = true
 ```
+
+---
+
+## 10. Copilot Agent Automation
+
+This repository includes a reusable Copilot cloud-agent profile for backlog-driven implementation:
+
+- Agent behavior rules: `.github/copilot-instructions.md`
+- Copilot setup workflow: `.github/workflows/copilot-setup-steps.yml`
+
+The setup workflow preinstalls Python 3.12 tooling (`uv`) and project dependencies before agent work starts.  
+The instructions file enforces one-task-at-a-time backlog execution, scoped changes, validation, logging, and commit hygiene.
+
+---
+
+## 11. Phase 1 Data Foundation
+
+Phase 1 implementation details for macro ingestion/normalization live in:
+
+- `docs/phase1_macro_data_foundation.md`
+
+Core artifacts:
+
+- Indicator catalog: `pipelines/ingestion/indicator_catalog.py`
+- Source mapping: `adapters/sources/fred/series_map.py`
+- Ingestion jobs: `pipelines/ingestion/ingestion_jobs.py`
+- Normalized schema + freshness/revision models: `pipelines/ingestion/models.py`
+- Raw/normalized/run persistence pattern: `adapters/repositories/in_memory_feature_store.py`

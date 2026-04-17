@@ -52,11 +52,11 @@ def _make_feature(
 def _make_default_features(country: str = "US") -> list[MacroFeature]:
     """Return one FRED feature per DEFAULT_INDICATORS entry."""
     indicator_map = {
-        MacroIndicatorType.GDP: 25000.0,
         MacroIndicatorType.INFLATION: 310.0,
         MacroIndicatorType.UNEMPLOYMENT: 4.1,
-        MacroIndicatorType.INTEREST_RATE: 5.25,
-        MacroIndicatorType.BOND_YIELD: 4.6,
+        MacroIndicatorType.YIELD_10Y: 4.6,
+        MacroIndicatorType.PMI: 52.0,
+        MacroIndicatorType.RETAIL_SALES: 700000.0,
     }
     return [_make_feature(ind, val, country) for ind, val in indicator_map.items()]
 
@@ -76,20 +76,20 @@ class TestFredSeriesMap:
                 f"{indicator_str!r} is in DEFAULT_INDICATORS but has no FRED series ID"
             )
 
-    def test_gdp_maps_to_gdpc1(self) -> None:
-        assert FRED_SERIES_MAP[MacroIndicatorType.GDP] == "GDPC1"
-
     def test_inflation_maps_to_cpiaucsl(self) -> None:
         assert FRED_SERIES_MAP[MacroIndicatorType.INFLATION] == "CPIAUCSL"
 
     def test_unemployment_maps_to_unrate(self) -> None:
         assert FRED_SERIES_MAP[MacroIndicatorType.UNEMPLOYMENT] == "UNRATE"
 
-    def test_interest_rate_maps_to_fedfunds(self) -> None:
-        assert FRED_SERIES_MAP[MacroIndicatorType.INTEREST_RATE] == "FEDFUNDS"
+    def test_yield_10y_maps_to_dgs10(self) -> None:
+        assert FRED_SERIES_MAP[MacroIndicatorType.YIELD_10Y] == "DGS10"
 
-    def test_bond_yield_maps_to_dgs10(self) -> None:
-        assert FRED_SERIES_MAP[MacroIndicatorType.BOND_YIELD] == "DGS10"
+    def test_pmi_maps_to_napm(self) -> None:
+        assert FRED_SERIES_MAP[MacroIndicatorType.PMI] == "NAPM"
+
+    def test_retail_sales_maps_to_rsafs(self) -> None:
+        assert FRED_SERIES_MAP[MacroIndicatorType.RETAIL_SALES] == "RSAFS"
 
 
 # ---------------------------------------------------------------------------
@@ -207,21 +207,33 @@ class TestFredMacroDataSourceFailurePaths:
 
         src = FredMacroDataSource(api_key="test-key")
         http_err = urllib.error.HTTPError(
-            url="http://example.com", code=400, msg="Bad Request", hdrs=None, fp=None  # type: ignore[arg-type]
+            url="http://example.com",
+            code=400,
+            msg="Bad Request",
+            hdrs=None,
+            fp=None,  # type: ignore[arg-type]
         )
-        with patch.object(src, "_fetch_latest_observation", side_effect=RuntimeError(
-            "FRED API HTTP error 400 for series='GDPC1': Bad Request. "
-            "Verify your FRED_API_KEY and network access."
-        )):
+        with patch.object(
+            src,
+            "_fetch_latest_observation",
+            side_effect=RuntimeError(
+                "FRED API HTTP error 400 for series='GDPC1': Bad Request. "
+                "Verify your FRED_API_KEY and network access."
+            ),
+        ):
             with pytest.raises(RuntimeError, match="FRED API HTTP error 400"):
                 src._fetch_latest_observation("GDPC1")
 
     def test_timeout_raises_runtime_error_with_message(self) -> None:
         src = FredMacroDataSource(api_key="test-key")
-        with patch.object(src, "_fetch_latest_observation", side_effect=RuntimeError(
-            "FRED API request timed out after 10.0s for series='GDPC1'. "
-            "Check your network connection or increase fred_request_timeout_s."
-        )):
+        with patch.object(
+            src,
+            "_fetch_latest_observation",
+            side_effect=RuntimeError(
+                "FRED API request timed out after 10.0s for series='GDPC1'. "
+                "Check your network connection or increase fred_request_timeout_s."
+            ),
+        ):
             with pytest.raises(RuntimeError, match="timed out"):
                 src._fetch_latest_observation("GDPC1")
 
@@ -231,7 +243,11 @@ class TestFredMacroDataSourceFailurePaths:
 
         src = FredMacroDataSource(api_key="test-key")
         http_err = urllib.error.HTTPError(
-            url="http://example.com", code=403, msg="Forbidden", hdrs=None, fp=None  # type: ignore[arg-type]
+            url="http://example.com",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,
+            fp=None,  # type: ignore[arg-type]
         )
 
         with patch.object(
@@ -241,6 +257,7 @@ class TestFredMacroDataSourceFailurePaths:
         ):
             with pytest.raises(RuntimeError, match="FRED API HTTP error 403"):
                 import asyncio
+
                 asyncio.get_event_loop().run_until_complete(
                     src.fetch_raw("US", [MacroIndicatorType.GDP.value])
                 )
@@ -256,6 +273,7 @@ class TestFredMacroDataSourceFailurePaths:
         ):
             with pytest.raises(RuntimeError, match="timed out"):
                 import asyncio
+
                 asyncio.get_event_loop().run_until_complete(
                     src.fetch_raw("US", [MacroIndicatorType.GDP.value])
                 )
