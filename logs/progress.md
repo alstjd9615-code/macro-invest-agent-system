@@ -233,3 +233,26 @@
 - **Result**: Regime confidence/degraded handling is explicit and deterministic.
 - **Next task**: `0305-regime_builder_service.md`
 - **Commit message**: `feat(regime): add confidence and degraded handling rules`
+
+## 2026-04-17T15:13:20.000Z
+- **Task name**: 0305 — Regime builder service
+- **Status**: DONE
+- **Summary of changes**:
+  - Added `MacroRegimeService` to build regimes from latest snapshot on/before as-of date.
+  - Builder now wires mapping, confidence, missing-input propagation, and rationale into `MacroRegime`.
+  - Added service tests for happy path, date fallback, and missing snapshot error.
+  - Added canonical builder doc.
+- **Files changed**:
+  - `services/macro_regime_service.py`
+  - `services/__init__.py`
+  - `tests/unit/services/test_macro_regime_service.py`
+  - `docs/regime_builder.md`
+  - `README.md`
+  - `backlog/0305-regime_builder_service.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format services\\macro_regime_service.py services\\__init__.py tests\\unit\\services\\test_macro_regime_service.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\services\\test_macro_regime_service.py tests\\unit\\domain\\macro\\test_regime_mapping.py -q`
+- **Result**: Regime build logic exists and is deterministic for selected as-of dates.
+- **Next task**: `0306-regime_persistence_model.md`
+- **Commit message**: `feat(regime): add regime builder service`

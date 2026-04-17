@@ -15,6 +15,8 @@
 - Added canonical mapping rules doc (`docs/regime_mapping_rules.md`).
 - Added deterministic regime confidence and missing-input handling utilities.
 - Added canonical confidence policy doc (`docs/regime_confidence_policy.md`).
+- Added regime builder service for as-of-date regime construction from snapshots.
+- Added canonical regime builder doc (`docs/regime_builder.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

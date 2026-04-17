@@ -60,5 +60,6 @@ docker compose up -d
 - Regime vocabulary: `docs/regime_vocabulary.md`
 - Regime mapping rules: `docs/regime_mapping_rules.md`
 - Regime confidence policy: `docs/regime_confidence_policy.md`
+- Regime builder: `docs/regime_builder.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`
