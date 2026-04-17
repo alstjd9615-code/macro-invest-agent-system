@@ -83,3 +83,9 @@
 - **Reason**: Reduce misleading maturity signals while preserving useful provisional tooling.
 - **Tradeoff**: Product copy is intentionally narrower and less polished.
 - **Follow-up**: Promote labels only after rule engine and explanation persistence are production-grade.
+
+## 2026-04-17 — Separate CI and CD workflows
+- **Decision**: Use two workflows: `ci.yml` for validation on PR/branch pushes and `cd.yml` for deployment on `main` only.
+- **Reason**: Keep verification and deployment concerns isolated, and prevent feature-branch deployments.
+- **Tradeoff**: Slightly more workflow maintenance versus a single pipeline file.
+- **Follow-up**: Add environment protection rules for production deploy approvals if required.

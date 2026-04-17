@@ -26,6 +26,9 @@
 - Added canonical Phase 3 regime docs index (`docs/regime_engine.md`).
 - Added Phase 3 end-to-end regime flow test coverage.
 - Added canonical legacy surface status doc (`docs/legacy_surface_status.md`).
+- Added GitHub Actions CI workflow (`.github/workflows/ci.yml`).
+- Added GitHub Actions CD workflow (`.github/workflows/cd.yml`).
+- Added CI/CD quick guide (`docs/ci_cd.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
@@ -43,6 +46,7 @@
 - Corrected deployment docs to reflect containerized API/frontend services.
 - Updated README/roadmap status wording for post-Phase-3 baseline state.
 - Updated frontend dashboard to surface Phase 3 regime latest/transition panels while keeping signals/explanations explicitly experimental.
+- Updated README canonical docs links to include CI/CD quick guide.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.

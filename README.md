@@ -59,5 +59,6 @@ docker compose up -d
 - Snapshot state derivation rules: `docs/state_derivation_rules.md`
 - Regime engine docs index: `docs/regime_engine.md`
 - Legacy surface status: `docs/legacy_surface_status.md`
+- CI/CD quick guide: `docs/ci_cd.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

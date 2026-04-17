@@ -415,3 +415,24 @@
 - **Validation performed**:
   - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_regimes_router.py tests\\unit\\api\\test_snapshots_router.py tests\\unit\\api\\test_signals_router.py -q`
 - **Result**: Frontend now reflects current Phase 3 core state first, with experimental legacy surfaces still contained.
+
+## 2026-04-17T15:54:55.709Z
+- **Task name**: Minimal reliable CI/CD setup
+- **Status**: DONE
+- **Summary of changes**:
+  - Added separate GitHub Actions workflows for CI and CD.
+  - CI now runs backend install/tests, frontend install/build, and Docker smoke builds.
+  - CD now triggers on `main` only and deploys via SSH + Docker Compose with post-deploy health checks.
+  - Added short CI/CD documentation with branch flow, triggers, required secrets, and manual fallback commands.
+- **Files changed**:
+  - `.github/workflows/ci.yml`
+  - `.github/workflows/cd.yml`
+  - `docs/ci_cd.md`
+  - `README.md`
+  - `logs/changelog.md`
+  - `logs/decisions.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - YAML/workflow structure review
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_regimes_router.py -q`
+- **Result**: Repository has a usable CI/CD baseline with branch-safe deployment behavior and documented environment setup requirements.
