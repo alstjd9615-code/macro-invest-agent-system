@@ -35,3 +35,9 @@
 - **Reason**: Policy prioritizes canonical truth and reviewable contracts over surface completeness.
 - **Tradeoff**: Regime outputs are not yet mapped/built; only schema layer is complete in this task.
 - **Follow-up**: Implement deterministic snapshot→regime mapping in 0302/0303 tasks.
+
+## 2026-04-17 — Canonical regime vocabulary mapping
+- **Decision**: Enforce a deterministic `regime_label -> regime_family` mapping at the domain contract layer (`MacroRegime` validator).
+- **Reason**: Prevent inconsistent label/family combinations and keep vocabulary truthful before builder/mapping expansion.
+- **Tradeoff**: Callers must provide aligned label/family pairs or receive validation errors.
+- **Follow-up**: Reuse this mapping in snapshot-to-regime rule implementation (0303).

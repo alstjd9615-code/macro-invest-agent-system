@@ -18,23 +18,9 @@ Canonical models: `domain/macro/regime.py`
 - `transition`
 - `rationale_summary`
 
-## Regime vocabulary
+Vocabulary and label-family mapping are defined in:
 
-- `goldilocks`
-- `disinflation`
-- `slowdown`
-- `reflation`
-- `stagflation_risk`
-- `contraction`
-- `policy_tightening_drag`
-- `mixed`
-- `unclear`
-
-## Confidence vocabulary
-
-- `high`
-- `medium`
-- `low`
+- `docs/regime_vocabulary.md`
 
 ## Transition metadata
 

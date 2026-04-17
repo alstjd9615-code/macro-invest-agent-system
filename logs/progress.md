@@ -163,3 +163,27 @@
 - **Result**: Phase 3 regime schema contract baseline is implemented and validated.
 - **Next task**: `0302-regime_vocabulary_definition.md` (when present in backlog).
 - **Commit message**: `feat(regime): define macro regime schema contract`
+
+## 2026-04-17T15:00:12.968Z
+- **Task name**: 0302 — Regime vocabulary definition
+- **Status**: DONE
+- **Summary of changes**:
+  - Added canonical deterministic `regime_label -> regime_family` mapping in domain contract.
+  - Added `regime_family_for_label` helper and exported vocabulary mapping utilities.
+  - Enforced `MacroRegime` label/family consistency via model validation.
+  - Added canonical vocabulary doc and removed duplicate vocabulary listing from schema doc.
+- **Files changed**:
+  - `domain/macro/regime.py`
+  - `domain/macro/__init__.py`
+  - `tests/unit/domain/macro/test_regime_schema.py`
+  - `docs/regime_vocabulary.md`
+  - `docs/regime_schema.md`
+  - `README.md`
+  - `backlog/0302-regime_vocabulary_definition.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format domain\\macro\\regime.py domain\\macro\\__init__.py tests\\unit\\domain\\macro\\test_regime_schema.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_schema.py tests\\unit\\domain\\macro\\test_snapshot.py -q`
+- **Result**: Phase 3 regime vocabulary is explicitly defined and schema-enforced.
+- **Next task**: `0303-snapshot_to_regime_mapping_rules.md` (if present in backlog).
+- **Commit message**: `feat(regime): define canonical regime vocabulary mapping`

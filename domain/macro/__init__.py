@@ -10,11 +10,13 @@ from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceTyp
 from domain.macro.models import MacroFeature, MacroSnapshot
 from domain.macro.regime import (
     MacroRegime,
+    REGIME_LABEL_FAMILY_MAP,
     RegimeConfidence,
     RegimeFamily,
     RegimeLabel,
     RegimeTransition,
     RegimeTransitionType,
+    regime_family_for_label,
 )
 
 __all__ = [
@@ -30,6 +32,8 @@ __all__ = [
     "RegimeLabel",
     "RegimeFamily",
     "RegimeConfidence",
+    "REGIME_LABEL_FAMILY_MAP",
+    "regime_family_for_label",
     "RegimeTransitionType",
     "RegimeTransition",
     "MacroRegime",

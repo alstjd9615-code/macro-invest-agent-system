@@ -9,11 +9,13 @@ from pydantic import ValidationError
 
 from domain.macro.regime import (
     MacroRegime,
+    REGIME_LABEL_FAMILY_MAP,
     RegimeConfidence,
     RegimeFamily,
     RegimeLabel,
     RegimeTransition,
     RegimeTransitionType,
+    regime_family_for_label,
 )
 
 
@@ -27,6 +29,11 @@ class TestRegimeEnums:
         assert RegimeConfidence.HIGH.value == "high"
         assert RegimeConfidence.MEDIUM.value == "medium"
         assert RegimeConfidence.LOW.value == "low"
+
+    def test_label_family_map_covers_all_labels(self) -> None:
+        assert set(REGIME_LABEL_FAMILY_MAP) == set(RegimeLabel)
+        assert regime_family_for_label(RegimeLabel.GOLDILOCKS) == RegimeFamily.EXPANSION
+        assert regime_family_for_label(RegimeLabel.UNCLEAR) == RegimeFamily.UNCERTAIN
 
 
 class TestRegimeTransition:
@@ -77,4 +84,13 @@ class TestMacroRegime:
                 as_of_date=date(2026, 2, 1),
                 supporting_snapshot_id="snap-001",
                 bad="x",  # type: ignore[call-arg]
+            )
+
+    def test_rejects_label_family_mismatch(self) -> None:
+        with pytest.raises(ValidationError, match="must match regime_label"):
+            MacroRegime(
+                as_of_date=date(2026, 2, 1),
+                supporting_snapshot_id="snap-001",
+                regime_label=RegimeLabel.CONTRACTION,
+                regime_family=RegimeFamily.EXPANSION,
             )

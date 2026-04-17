@@ -10,6 +10,7 @@
 - Added Phase 2 snapshot contract, builder service, in-memory snapshot repository, and comparison metadata baseline.
 - Added canonical docs: `docs/snapshot_schema.md`, `docs/state_derivation_rules.md`.
 - Added Phase 3 regime schema contracts and canonical regime schema doc.
+- Added canonical regime vocabulary reference doc (`docs/regime_vocabulary.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
@@ -19,6 +20,7 @@
 - Expanded Phase 1 storage schema draft to include raw payload, normalized observation, and ingestion run tables.
 - Reorganized docs to policy-aligned canonical structure (`architecture`, `roadmap`, `macro_indicator_catalog`, `ingestion_design`, `storage_schema`, `freshness_policy`).
 - Simplified README into entry-level quickstart + canonical-doc links.
+- Added deterministic regime label-to-family mapping and contract-level enforcement for label/family consistency.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.

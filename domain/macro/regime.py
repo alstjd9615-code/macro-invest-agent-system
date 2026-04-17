@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, date, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from domain.macro.snapshot import DegradedStatus
 from pipelines.ingestion.models import FreshnessStatus
@@ -48,6 +48,23 @@ class RegimeTransitionType(StrEnum):
     UNKNOWN = "unknown"
 
 
+REGIME_LABEL_FAMILY_MAP: dict[RegimeLabel, RegimeFamily] = {
+    RegimeLabel.GOLDILOCKS: RegimeFamily.EXPANSION,
+    RegimeLabel.DISINFLATION: RegimeFamily.INFLATION_TRANSITION,
+    RegimeLabel.SLOWDOWN: RegimeFamily.DOWNSHIFT,
+    RegimeLabel.REFLATION: RegimeFamily.INFLATION_TRANSITION,
+    RegimeLabel.STAGFLATION_RISK: RegimeFamily.LATE_CYCLE,
+    RegimeLabel.CONTRACTION: RegimeFamily.CONTRACTION,
+    RegimeLabel.POLICY_TIGHTENING_DRAG: RegimeFamily.LATE_CYCLE,
+    RegimeLabel.MIXED: RegimeFamily.UNCERTAIN,
+    RegimeLabel.UNCLEAR: RegimeFamily.UNCERTAIN,
+}
+
+
+def regime_family_for_label(label: RegimeLabel) -> RegimeFamily:
+    return REGIME_LABEL_FAMILY_MAP[label]
+
+
 class RegimeTransition(BaseModel, extra="forbid"):
     transition_from_prior: str | None = Field(default=None, description="Prior regime label")
     transition_type: RegimeTransitionType = Field(default=RegimeTransitionType.UNKNOWN)
@@ -73,3 +90,14 @@ class MacroRegime(BaseModel, extra="forbid"):
 
     transition: RegimeTransition = Field(default_factory=RegimeTransition)
     rationale_summary: str = Field(default="")
+
+    @model_validator(mode="after")
+    def validate_label_family_alignment(self) -> "MacroRegime":
+        expected_family = regime_family_for_label(self.regime_label)
+        if self.regime_family != expected_family:
+            msg = (
+                f"regime_family '{self.regime_family.value}' must match "
+                f"regime_label '{self.regime_label.value}'"
+            )
+            raise ValueError(msg)
+        return self
