@@ -13,6 +13,8 @@
 - Added canonical regime vocabulary reference doc (`docs/regime_vocabulary.md`).
 - Added deterministic snapshot-to-regime mapping rules and mapping tests.
 - Added canonical mapping rules doc (`docs/regime_mapping_rules.md`).
+- Added deterministic regime confidence and missing-input handling utilities.
+- Added canonical confidence policy doc (`docs/regime_confidence_policy.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

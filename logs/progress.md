@@ -210,3 +210,26 @@
 - **Result**: Snapshot state -> regime label mapping is deterministic and reviewable.
 - **Next task**: `0304-regime_confidence_and_degraded_handling.md`
 - **Commit message**: `feat(regime): add deterministic snapshot-to-regime mapping`
+
+## 2026-04-17T15:10:10.000Z
+- **Task name**: 0304 — Regime confidence and degraded handling
+- **Status**: DONE
+- **Summary of changes**:
+  - Added deterministic regime confidence derivation (`high|medium|low`).
+  - Added missing-input propagation from snapshot to regime layer.
+  - Added confidence/degraded policy tests.
+  - Added canonical confidence policy document.
+- **Files changed**:
+  - `domain/macro/regime_mapping.py`
+  - `domain/macro/__init__.py`
+  - `tests/unit/domain/macro/test_regime_confidence.py`
+  - `docs/regime_confidence_policy.md`
+  - `README.md`
+  - `backlog/0304-regime_confidence_and_degraded_handling.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format domain\\macro\\regime_mapping.py domain\\macro\\__init__.py tests\\unit\\domain\\macro\\test_regime_confidence.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_confidence.py tests\\unit\\domain\\macro\\test_regime_mapping.py -q`
+- **Result**: Regime confidence/degraded handling is explicit and deterministic.
+- **Next task**: `0305-regime_builder_service.md`
+- **Commit message**: `feat(regime): add confidence and degraded handling rules`

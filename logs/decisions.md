@@ -47,3 +47,9 @@
 - **Reason**: Avoid overconfident labels when data quality is degraded or state coverage is incomplete.
 - **Tradeoff**: Some edge snapshots collapse into `mixed/unclear` rather than more specific labels.
 - **Follow-up**: Add confidence layer in 0304 and transition tuning in 0307.
+
+## 2026-04-17 — Coarse-grained confidence over false precision
+- **Decision**: Use only `high|medium|low` confidence and deterministic downgrade rules from freshness/degraded/missing/unknown states.
+- **Reason**: Current phase prioritizes honest uncertainty handling over speculative precision.
+- **Tradeoff**: Confidence is intentionally conservative; nuanced probabilistic scoring is deferred.
+- **Follow-up**: Reuse these confidence outputs in regime builder and transition services.

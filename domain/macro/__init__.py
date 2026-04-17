@@ -20,6 +20,8 @@ from domain.macro.regime import (
 )
 from domain.macro.regime_mapping import (
     build_regime_rationale,
+    derive_regime_confidence,
+    derive_regime_missing_inputs,
     map_snapshot_to_regime,
     map_snapshot_to_regime_label,
 )
@@ -42,6 +44,8 @@ __all__ = [
     "map_snapshot_to_regime_label",
     "map_snapshot_to_regime",
     "build_regime_rationale",
+    "derive_regime_confidence",
+    "derive_regime_missing_inputs",
     "RegimeTransitionType",
     "RegimeTransition",
     "MacroRegime",

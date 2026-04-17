@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from domain.macro.regime import RegimeFamily, RegimeLabel, regime_family_for_label
+from domain.macro.regime import (
+    RegimeConfidence,
+    RegimeFamily,
+    RegimeLabel,
+    regime_family_for_label,
+)
 from domain.macro.snapshot import (
     DegradedStatus,
     FinancialConditionsState,
@@ -106,3 +111,43 @@ def build_regime_rationale(snapshot: MacroSnapshotState, label: RegimeLabel) -> 
         f"financial_conditions={snapshot.financial_conditions_state.value}, "
         f"label={label.value}"
     )
+
+
+def derive_regime_confidence(
+    snapshot: MacroSnapshotState,
+    label: RegimeLabel,
+) -> RegimeConfidence:
+    """Derive confidence from freshness, degraded status, and state coherence."""
+    if snapshot.degraded_status in {DegradedStatus.MISSING, DegradedStatus.SOURCE_UNAVAILABLE}:
+        return RegimeConfidence.LOW
+    if snapshot.freshness_status in {FreshnessStatus.STALE, FreshnessStatus.UNKNOWN}:
+        return RegimeConfidence.LOW
+
+    confidence = RegimeConfidence.HIGH
+
+    if snapshot.degraded_status == DegradedStatus.PARTIAL:
+        confidence = RegimeConfidence.MEDIUM
+    if snapshot.freshness_status == FreshnessStatus.LATE:
+        confidence = RegimeConfidence.MEDIUM
+
+    unknown_count = sum(
+        1
+        for state in (
+            snapshot.growth_state,
+            snapshot.inflation_state,
+            snapshot.labor_state,
+            snapshot.policy_state,
+            snapshot.financial_conditions_state,
+        )
+        if str(state).endswith("unknown")
+    )
+    if unknown_count > 0:
+        confidence = RegimeConfidence.MEDIUM if unknown_count == 1 else RegimeConfidence.LOW
+
+    if label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
+        return RegimeConfidence.LOW
+    return confidence
+
+
+def derive_regime_missing_inputs(snapshot: MacroSnapshotState) -> list[str]:
+    return list(snapshot.missing_indicators)

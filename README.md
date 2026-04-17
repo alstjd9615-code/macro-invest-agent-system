@@ -59,5 +59,6 @@ docker compose up -d
 - Regime contract: `docs/regime_schema.md`
 - Regime vocabulary: `docs/regime_vocabulary.md`
 - Regime mapping rules: `docs/regime_mapping_rules.md`
+- Regime confidence policy: `docs/regime_confidence_policy.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`
