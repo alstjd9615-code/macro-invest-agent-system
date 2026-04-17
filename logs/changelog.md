@@ -23,6 +23,7 @@
 - Added canonical regime transition rules doc (`docs/regime_transition_rules.md`).
 - Added regime API DTOs and read routes (`/api/regimes/latest`, `/api/regimes/compare`).
 - Added canonical regime API contract doc (`docs/regime_api_contract.md`).
+- Added canonical Phase 3 regime docs index (`docs/regime_engine.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
@@ -34,6 +35,7 @@
 - Simplified README into entry-level quickstart + canonical-doc links.
 - Added deterministic regime label-to-family mapping and contract-level enforcement for label/family consistency.
 - Updated storage schema docs with Phase 3 regime layer note.
+- Simplified README regime references to index link for lower duplication.
 
 ### Ops
 - Added `.github/workflows/copilot-setup-steps.yml` so Copilot cloud agent consistently provisions Python 3.12 + `uv` and installs dependencies before task execution.

@@ -56,13 +56,6 @@ docker compose up -d
 - Freshness policy: `docs/freshness_policy.md`
 - Snapshot contract: `docs/snapshot_schema.md`
 - Snapshot state derivation rules: `docs/state_derivation_rules.md`
-- Regime contract: `docs/regime_schema.md`
-- Regime vocabulary: `docs/regime_vocabulary.md`
-- Regime mapping rules: `docs/regime_mapping_rules.md`
-- Regime confidence policy: `docs/regime_confidence_policy.md`
-- Regime builder: `docs/regime_builder.md`
-- Regime persistence: `docs/regime_persistence.md`
-- Regime transition rules: `docs/regime_transition_rules.md`
-- Regime API contract: `docs/regime_api_contract.md`
+- Regime engine docs index: `docs/regime_engine.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

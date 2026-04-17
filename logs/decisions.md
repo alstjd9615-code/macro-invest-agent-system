@@ -71,3 +71,9 @@
 - **Reason**: Analysts need inspectable regime/transition state without introducing write-side workflow complexity.
 - **Tradeoff**: API currently serves persisted regimes only; build triggering remains service-side.
 - **Follow-up**: Add explicit build orchestration endpoint only if backlog requires write actions.
+
+## 2026-04-17 — Regime docs canonical index
+- **Decision**: Add a single Phase 3 docs index (`docs/regime_engine.md`) and reference it from README/roadmap.
+- **Reason**: Reduce duplication drift across many small regime docs while preserving one-topic-per-file references.
+- **Tradeoff**: Readers do one extra click from README to topic docs.
+- **Follow-up**: Keep new regime docs linked through the index only.

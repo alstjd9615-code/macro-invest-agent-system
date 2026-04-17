@@ -335,3 +335,22 @@
 - **Result**: Regime read API contract is implemented and test-covered.
 - **Next task**: `0309-regime_docs_cleanup.md`
 - **Commit message**: `feat(api): add regime read contract endpoints`
+
+## 2026-04-17T15:30:00.000Z
+- **Task name**: 0309 — Regime docs cleanup
+- **Status**: DONE
+- **Summary of changes**:
+  - Added canonical Phase 3 docs index (`docs/regime_engine.md`).
+  - Reduced README regime-doc duplication by linking to index.
+  - Updated roadmap to point to the canonical regime docs index.
+- **Files changed**:
+  - `docs/regime_engine.md`
+  - `README.md`
+  - `docs/roadmap.md`
+  - `backlog/0309-regime_docs_cleanup.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - Documentation role/duplication review against current repository policy.
+- **Result**: Phase 3 docs now have a single canonical entry point with reduced overlap.
+- **Next task**: `0310-phase3_tests_and_validation.md`
+- **Commit message**: `docs(regime): consolidate canonical phase3 docs index`

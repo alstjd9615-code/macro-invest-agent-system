@@ -26,5 +26,7 @@ Primary deliverables:
 - Snapshot-to-regime deterministic mapping
 - Regime confidence/degraded handling
 - Regime transition comparison
+- Regime persistence and read API contract
+- Canonical docs index: `docs/regime_engine.md`
 
 Phase details should be refined in backlog tasks, not duplicated in README.
