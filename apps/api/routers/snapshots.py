@@ -3,10 +3,10 @@
 Routes
 ------
 ``GET /api/snapshots/latest``
-    Return the latest macro snapshot for a given country.
+    Return the latest macro observation table for a given country.
 
 ``POST /api/snapshots/compare``
-    Compare the current macro snapshot against provided prior feature values.
+    Compare the current macro observation table against provided prior values.
 
 Design constraints
 ------------------
@@ -41,9 +41,9 @@ router = APIRouter(prefix="/api/snapshots", tags=["snapshots"])
 @router.get(
     "/latest",
     response_model=SnapshotLatestResponse,
-    summary="Get latest macro snapshot",
+    summary="Get latest macro observations",
     description=(
-        "Return the latest macroeconomic snapshot for a given country. "
+        "Return the latest macroeconomic observation table for a given country. "
         "The response includes all available indicator values and trust metadata "
         "(freshness, source attribution, availability)."
     ),
@@ -52,7 +52,7 @@ async def get_latest_snapshot(
     country: str = Query(default="US", description="ISO 3166-1 alpha-2 country code"),
     macro_service: MacroServiceInterface = Depends(get_macro_service),
 ) -> SnapshotLatestResponse:
-    """Retrieve the latest macro snapshot for *country*.
+    """Retrieve the latest macro observation table for *country*.
 
     Returns HTTP 200 with :class:`~apps.api.dto.snapshots.SnapshotLatestResponse`
     on success, or HTTP 502 if the macro service cannot be reached.
@@ -79,9 +79,9 @@ async def get_latest_snapshot(
 @router.post(
     "/compare",
     response_model=SnapshotCompareResponse,
-    summary="Compare current vs prior macro snapshot",
+    summary="Compare current vs prior macro observations",
     description=(
-        "Compare the current macro snapshot for a given country against a set of "
+        "Compare the current macro observation table for a given country against a set of "
         "prior indicator values supplied by the caller. Returns per-indicator deltas "
         "with direction (increased/decreased/unchanged/no_prior), before/after values, "
         "and trust metadata. Useful for rendering comparison cards and change tables."

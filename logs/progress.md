@@ -371,3 +371,30 @@
 - **Result**: Phase 3 implementation is covered end-to-end across domain, service, persistence, and API layers.
 - **Next task**: Phase 3 backlog complete.
 - **Commit message**: `test(regime): add phase3 end-to-end validation coverage`
+
+## 2026-04-17T15:26:37.316Z
+- **Task name**: Post-evaluation truthfulness cleanup
+- **Status**: DONE
+- **Summary of changes**:
+  - Corrected README/roadmap status wording to reflect post-Phase-3 baseline state.
+  - Added canonical legacy status doc and marked signal/explanation surfaces experimental.
+  - Updated API route summaries/descriptions and frontend labels for truthful naming.
+  - Corrected deployment guide drift about API containerization and running services.
+- **Files changed**:
+  - `README.md`
+  - `docs/roadmap.md`
+  - `docs/legacy_surface_status.md`
+  - `docs/deployment.md`
+  - `apps/api/main.py`
+  - `apps/api/routers/snapshots.py`
+  - `apps/api/routers/signals.py`
+  - `apps/api/routers/explanations.py`
+  - `frontend/index.html`
+  - `frontend/app.js`
+  - `logs/changelog.md`
+  - `logs/decisions.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format apps\\api\\main.py apps\\api\\routers\\snapshots.py apps\\api\\routers\\signals.py apps\\api\\routers\\explanations.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\api\\test_snapshots_router.py tests\\unit\\api\\test_signals_router.py tests\\unit\\api\\test_explanations_router.py -q`
+- **Result**: Repository labels/docs now better match actual maturity; legacy edges are explicitly contained as experimental.

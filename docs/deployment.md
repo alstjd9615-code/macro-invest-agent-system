@@ -19,6 +19,8 @@ This brings up:
 |---------|------|---------|
 | PostgreSQL | `5432` | Feature and signal persistence |
 | MinIO | `9000` / `9001` | Raw data artefacts |
+| API | `8000` | Analyst-facing FastAPI read API |
+| Frontend | `8080` | Minimal analyst dashboard |
 | Prometheus | `9090` | Metrics collection |
 | Grafana | `3000` | Metrics dashboards |
 
@@ -30,7 +32,8 @@ docker compose ps
 
 ### Start the API
 
-The FastAPI app is not yet containerised. Run it locally with:
+The API is containerised in `docker-compose.yml` (`api` service).  
+For local non-container debug, run:
 
 ```bash
 uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload

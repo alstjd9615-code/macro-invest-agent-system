@@ -12,7 +12,8 @@ Macroeconomic data ingestion and analysis platform for deterministic investment 
 
 - **Phase 1 (Macro Data Foundation): baseline complete**
 - **Phase 2 (Macro Snapshot Layer): baseline complete**
-- **Phase 3 (Macro Regime Engine): in progress**
+- **Phase 3 (Macro Regime Engine): baseline complete**
+- **Legacy surface cleanup: in progress (truthful naming + experimental containment)**
 
 ## Local run (quickstart)
 
@@ -39,11 +40,11 @@ docker compose up -d
 
 ## High-level components
 
-- **Domain/Core**: deterministic macro + signal models and rules.
+- **Domain/Core**: deterministic macro, snapshot, and regime models/rules.
 - **Pipelines**: macro ingestion and normalization workflows.
 - **Snapshot layer**: deterministic macro state structuring and comparison.
 - **Regime layer**: deterministic snapshot-to-regime contract and classification.
-- **API**: analyst-facing read API.
+- **API**: analyst-facing read API (signals/explanations are currently experimental surfaces).
 - **Observability**: Prometheus metrics + Grafana dashboards.
 
 ## Canonical documentation
@@ -57,5 +58,6 @@ docker compose up -d
 - Snapshot contract: `docs/snapshot_schema.md`
 - Snapshot state derivation rules: `docs/state_derivation_rules.md`
 - Regime engine docs index: `docs/regime_engine.md`
+- Legacy surface status: `docs/legacy_surface_status.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Macro Analyst Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Macro Analyst Dashboard</h1>
+      <p class="sub">Minimal UI for observations, comparison, and experimental signal/explanation surfaces.</p>
+
+      <section class="card">
+        <div class="row">
+          <h2>Latest Observations</h2>
+          <button id="refresh-snapshot" type="button">Refresh</button>
+        </div>
+        <div id="snapshot-trust" class="trust"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Indicator</th>
+              <th>Value</th>
+              <th>Source</th>
+              <th>Observed</th>
+            </tr>
+          </thead>
+          <tbody id="snapshot-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2>Observation Comparison Table</h2>
+          <button id="run-compare" type="button">Run Compare</button>
+        </div>
+        <div id="compare-trust" class="trust"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Indicator</th>
+              <th>Current</th>
+              <th>Prior</th>
+              <th>Delta</th>
+              <th>Direction</th>
+            </tr>
+          </thead>
+          <tbody id="compare-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2>Experimental Signals</h2>
+          <button id="refresh-signals" type="button">Refresh</button>
+        </div>
+        <div id="signals-trust" class="trust"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Signal</th>
+              <th>Type</th>
+              <th>Strength</th>
+              <th>Score</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody id="signals-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Experimental Explanation</h2>
+        <div id="explanation-trust" class="trust"></div>
+        <p id="explanation-summary" class="summary"></p>
+        <ul id="explanation-points"></ul>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

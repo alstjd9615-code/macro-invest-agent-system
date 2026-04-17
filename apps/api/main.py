@@ -6,10 +6,10 @@ Exposes:
 - ``GET /metrics``                    — Prometheus metrics scrape endpoint.
 - ``GET /api/snapshots/latest``       — latest macro snapshot (analyst read).
 - ``POST /api/snapshots/compare``     — snapshot comparison (analyst read).
-- ``GET /api/signals/latest``         — latest signal evaluations (analyst read).
+- ``GET /api/signals/latest``         — latest experimental signal evaluations.
 - ``GET /api/regimes/latest``         — latest persisted macro regime (analyst read).
 - ``GET /api/regimes/compare``        — current-vs-prior regime transition (analyst read).
-- ``GET /api/explanations/{id}``      — explanation by ID (analyst read).
+- ``GET /api/explanations/{id}``      — experimental explanation by ID.
 - ``GET /api/sessions/{id}``          — session context by ID (analyst read).
 
 Usage::
@@ -41,8 +41,8 @@ app = FastAPI(
     version="0.1.0",
     description=(
         "Macroeconomic investment agent platform — analyst-facing read API. "
-        "Provides read-only access to macro snapshots, signal evaluations, "
-        "explanations, and session context."
+        "Provides read-only access to macro observations/snapshots and regime outputs. "
+        "Signals and explanations are currently marked experimental surfaces."
     ),
     docs_url="/docs",
     redoc_url=None,

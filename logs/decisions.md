@@ -77,3 +77,9 @@
 - **Reason**: Reduce duplication drift across many small regime docs while preserving one-topic-per-file references.
 - **Tradeoff**: Readers do one extra click from README to topic docs.
 - **Follow-up**: Keep new regime docs linked through the index only.
+
+## 2026-04-17 — Legacy surface truthfulness cleanup
+- **Decision**: Keep signal/explanation surfaces active but explicitly label them experimental across API docs, UI labels, and canonical docs.
+- **Reason**: Reduce misleading maturity signals while preserving useful provisional tooling.
+- **Tradeoff**: Product copy is intentionally narrower and less polished.
+- **Follow-up**: Promote labels only after rule engine and explanation persistence are production-grade.

@@ -20,7 +20,7 @@ Primary deliverables:
 - Snapshot build/persist
 - Current-vs-previous snapshot comparison
 
-## Phase 3 — Macro Regime Engine (active)
+## Phase 3 — Macro Regime Engine (baseline complete)
 
 - Regime schema/contract
 - Snapshot-to-regime deterministic mapping
@@ -28,5 +28,11 @@ Primary deliverables:
 - Regime transition comparison
 - Regime persistence and read API contract
 - Canonical docs index: `docs/regime_engine.md`
+
+## Current cleanup focus
+
+- Truthful naming for legacy UI/API surfaces
+- Experimental labeling for provisional signal/explanation outputs
+- Canonical docs drift cleanup
 
 Phase details should be refined in backlog tasks, not duplicated in README.

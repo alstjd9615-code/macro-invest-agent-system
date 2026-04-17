@@ -1,4 +1,4 @@
-"""Explanation read routes for the analyst-facing product API.
+"""Experimental explanation read routes for the analyst-facing product API.
 
 Routes
 ------
@@ -26,9 +26,10 @@ from apps.api.dto.trust import DataAvailability, FreshnessStatus, TrustMetadata
 router = APIRouter(prefix="/api/explanations", tags=["explanations"])
 
 # ---------------------------------------------------------------------------
-# In-memory explanation store (placeholder for Phase 6 MVP)
+# In-memory explanation store (experimental surface)
 # ---------------------------------------------------------------------------
-# A real implementation would query a repository.  For Phase 6 MVP we store
+# A durable implementation would query a repository. For the current experimental
+# surface, we store
 # explanations keyed by their ID so that tests and the workbench can
 # round-trip against the API.
 
@@ -52,7 +53,7 @@ def clear_explanation_store() -> None:
 @router.get(
     "/{explanation_id}",
     response_model=ExplanationResponse,
-    summary="Get explanation by ID",
+    summary="Get experimental explanation by ID",
     description=(
         "Retrieve the explanation associated with a signal engine run or snapshot "
         "context. The explanation includes a short summary, supporting rationale "

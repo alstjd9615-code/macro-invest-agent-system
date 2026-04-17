@@ -1,15 +1,16 @@
-"""Signal read routes for the analyst-facing product API.
+"""Experimental signal read routes for the analyst-facing product API.
 
 Routes
 ------
 ``GET /api/signals/latest``
-    Run the signal engine against the current macro snapshot and return the
+    Run the experimental signal engine against the current macro snapshot and return the
     evaluated signal summaries with trust metadata.
 
 Design constraints
 ------------------
 * All routes are **read-only**.
-* Deterministic signal engine outputs are the authoritative source.
+* Signal outputs are currently **experimental** and should not be treated as
+  production investment decisions.
 * Trust metadata is always included in the response.
 """
 
@@ -20,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from apps.api.dependencies import get_macro_service, get_signal_service
 from apps.api.dto.builders import build_trust_from_signal_result, signal_output_to_dto
 from apps.api.dto.signals import SignalsLatestResponse
+from apps.api.routers.explanations import build_and_register_explanation
 from domain.signals.registry import default_registry
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
 
@@ -29,9 +31,9 @@ router = APIRouter(prefix="/api/signals", tags=["signals"])
 @router.get(
     "/latest",
     response_model=SignalsLatestResponse,
-    summary="Get latest signal evaluations",
+    summary="Get latest experimental signal evaluations",
     description=(
-        "Run the signal engine against the current macro snapshot and return all "
+        "Run the experimental signal engine against the current macro snapshot and return all "
         "evaluated signal summaries. The response includes per-signal type, strength, "
         "score, trend, rationale, rule-level results, and trust metadata. "
         "Use the 'signal_ids' query parameter to filter to specific signals."
@@ -49,7 +51,7 @@ async def get_latest_signals(
     macro_service: MacroServiceInterface = Depends(get_macro_service),
     signal_service: SignalServiceInterface = Depends(get_signal_service),
 ) -> SignalsLatestResponse:
-    """Evaluate and return the latest signals for *country*.
+    """Evaluate and return the latest experimental signals for *country*.
 
     Returns HTTP 200 with :class:`~apps.api.dto.signals.SignalsLatestResponse`
     on success.  Returns HTTP 502 if the macro service cannot be reached.
@@ -69,8 +71,7 @@ async def get_latest_signals(
         if missing:
             raise HTTPException(
                 status_code=422,
-                detail=f"Unknown signal IDs: {missing}. "
-                f"Available: {registry.list_ids()}",
+                detail=f"Unknown signal IDs: {missing}. Available: {registry.list_ids()}",
             )
     else:
         definitions = [registry.get(sid) for sid in registry.list_ids()]
@@ -117,6 +118,28 @@ async def get_latest_signals(
 
     signals_dtos = [signal_output_to_dto(s) for s in result.signals]
     trust = build_trust_from_signal_result(result)
+
+    if result.signals:
+        for signal in result.signals:
+            rationale_points = [
+                f"signal_type={signal.signal_type}",
+                f"strength={signal.strength}",
+                f"score={signal.score:.3f}",
+                f"rules_passed={sum(1 for passed in signal.rule_results.values() if passed)}/{len(signal.rule_results)}",
+            ]
+            build_and_register_explanation(
+                run_id=result.run_id,
+                signal_id=signal.signal_id,
+                summary=signal.rationale or f"Signal {signal.signal_id} evaluated successfully.",
+                rationale_points=rationale_points,
+            )
+    else:
+        build_and_register_explanation(
+            run_id=result.run_id,
+            signal_id=None,
+            summary=f"No signals were generated for country={country}.",
+            rationale_points=["The signal engine completed successfully with an empty result set."],
+        )
 
     strongest = result.strongest_signal()
     strongest_id = strongest.signal_id if strongest else None
