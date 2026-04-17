@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from core.contracts.macro_regime_repository import MacroRegimeRepositoryContract
 from core.contracts.macro_snapshot_repository import MacroSnapshotRepositoryContract
@@ -13,6 +13,7 @@ from domain.macro.regime_mapping import (
     derive_regime_missing_inputs,
     map_snapshot_to_regime,
 )
+from domain.macro.regime_transition import derive_regime_transition
 
 
 class MacroRegimeService:
@@ -55,6 +56,10 @@ class MacroRegimeService:
         if self._regime_repository is None:
             raise ValueError("Regime repository is not configured")
         regime = await self.build_regime(as_of_date=as_of_date)
+        previous = await self._regime_repository.get_latest_on_or_before(
+            as_of_date - timedelta(days=1)
+        )
+        regime.transition = derive_regime_transition(current=regime, previous=previous)
         await self._regime_repository.save_regime(regime)
         return regime
 

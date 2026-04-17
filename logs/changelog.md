@@ -19,6 +19,8 @@
 - Added canonical regime builder doc (`docs/regime_builder.md`).
 - Added macro regime persistence contract and in-memory adapter with latest retrieval.
 - Added canonical regime persistence doc (`docs/regime_persistence.md`).
+- Added deterministic regime transition logic and transition service wiring.
+- Added canonical regime transition rules doc (`docs/regime_transition_rules.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

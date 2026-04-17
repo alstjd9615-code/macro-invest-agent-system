@@ -62,5 +62,6 @@ docker compose up -d
 - Regime confidence policy: `docs/regime_confidence_policy.md`
 - Regime builder: `docs/regime_builder.md`
 - Regime persistence: `docs/regime_persistence.md`
+- Regime transition rules: `docs/regime_transition_rules.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

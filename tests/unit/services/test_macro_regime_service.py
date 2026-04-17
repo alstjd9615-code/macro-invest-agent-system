@@ -8,7 +8,7 @@ import pytest
 
 from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
-from domain.macro.regime import RegimeConfidence, RegimeLabel
+from domain.macro.regime import RegimeConfidence, RegimeLabel, RegimeTransitionType
 from domain.macro.snapshot import (
     DegradedStatus,
     FinancialConditionsState,
@@ -109,6 +109,7 @@ class TestMacroRegimeService:
         latest = await svc.get_latest_regime(as_of_date=date(2026, 2, 1))
         assert latest is not None
         assert latest.regime_id == saved.regime_id
+        assert saved.transition.transition_type == RegimeTransitionType.INITIAL
 
     async def test_build_and_save_requires_regime_repository(self) -> None:
         snapshot_repo = InMemoryMacroSnapshotStore()
@@ -125,3 +126,35 @@ class TestMacroRegimeService:
         svc = MacroRegimeService(snapshot_repository=snapshot_repo)
         with pytest.raises(ValueError, match="Regime repository is not configured"):
             await svc.build_and_save_regime(as_of_date=date(2026, 2, 1))
+
+    async def test_build_and_save_sets_shift_transition_with_prior(self) -> None:
+        snapshot_repo = InMemoryMacroSnapshotStore()
+        regime_repo = InMemoryMacroRegimeStore()
+        svc = MacroRegimeService(snapshot_repository=snapshot_repo, regime_repository=regime_repo)
+
+        await snapshot_repo.save_snapshot(
+            _snapshot(
+                as_of_date=date(2026, 1, 31),
+                growth=GrowthState.SLOWING,
+                inflation=InflationState.STICKY,
+                labor=LaborState.WEAK,
+                policy=PolicyState.RESTRICTIVE,
+                conditions=FinancialConditionsState.TIGHT,
+            )
+        )
+        first = await svc.build_and_save_regime(as_of_date=date(2026, 1, 31))
+        assert first.transition.transition_type == RegimeTransitionType.INITIAL
+
+        await snapshot_repo.save_snapshot(
+            _snapshot(
+                as_of_date=date(2026, 2, 1),
+                growth=GrowthState.ACCELERATING,
+                inflation=InflationState.COOLING,
+                labor=LaborState.TIGHT,
+                policy=PolicyState.NEUTRAL,
+                conditions=FinancialConditionsState.NEUTRAL,
+            )
+        )
+        second = await svc.build_and_save_regime(as_of_date=date(2026, 2, 1))
+        assert second.transition.transition_type == RegimeTransitionType.SHIFT
+        assert second.transition.changed is True

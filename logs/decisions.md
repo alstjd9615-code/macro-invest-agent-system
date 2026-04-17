@@ -59,3 +59,9 @@
 - **Reason**: Builder/transition/API layers need stable persistence semantics before durable storage wiring.
 - **Tradeoff**: Current runtime persistence is non-durable, but contract compatibility is preserved for later DB adapters.
 - **Follow-up**: Add transition-aware save flow and API query layer on top of this repository.
+
+## 2026-04-17 — Transition semantics favor explicit state changes
+- **Decision**: Define transition type from label change first, then confidence movement when label is unchanged.
+- **Reason**: Label shifts carry stronger macro meaning and should dominate transition classification.
+- **Tradeoff**: Intra-label nuances are compressed into strengthening/weakening only.
+- **Follow-up**: Keep transition output stable for API consumers and later analytics.

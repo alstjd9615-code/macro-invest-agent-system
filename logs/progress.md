@@ -282,3 +282,28 @@
 - **Result**: Regime persistence and retrieval baseline is implemented and tested.
 - **Next task**: `0307-regime_transition_logic.md`
 - **Commit message**: `feat(regime): add regime persistence contract and adapter`
+
+## 2026-04-17T15:22:10.000Z
+- **Task name**: 0307 — Regime transition logic
+- **Status**: DONE
+- **Summary of changes**:
+  - Added deterministic regime transition derivation utility.
+  - Wired transition assignment into regime build-and-save flow using prior persisted regime.
+  - Added transition unit tests plus service transition-flow tests.
+  - Added canonical transition-rules documentation.
+- **Files changed**:
+  - `domain/macro/regime_transition.py`
+  - `domain/macro/__init__.py`
+  - `services/macro_regime_service.py`
+  - `tests/unit/domain/macro/test_regime_transition.py`
+  - `tests/unit/services/test_macro_regime_service.py`
+  - `docs/regime_transition_rules.md`
+  - `README.md`
+  - `backlog/0307-regime_transition_logic.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format domain\\macro\\regime_transition.py domain\\macro\\__init__.py services\\macro_regime_service.py tests\\unit\\domain\\macro\\test_regime_transition.py tests\\unit\\services\\test_macro_regime_service.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_transition.py tests\\unit\\services\\test_macro_regime_service.py -q`
+- **Result**: Current-vs-prior regime transitions are deterministic and persisted with regimes.
+- **Next task**: `0308-regime_api_contract.md`
+- **Commit message**: `feat(regime): add deterministic regime transition logic`
