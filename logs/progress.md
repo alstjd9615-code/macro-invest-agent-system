@@ -187,3 +187,26 @@
 - **Result**: Phase 3 regime vocabulary is explicitly defined and schema-enforced.
 - **Next task**: `0303-snapshot_to_regime_mapping_rules.md` (if present in backlog).
 - **Commit message**: `feat(regime): define canonical regime vocabulary mapping`
+
+## 2026-04-17T15:06:30.000Z
+- **Task name**: 0303 — Snapshot to regime mapping rules
+- **Status**: DONE
+- **Summary of changes**:
+  - Added ordered deterministic mapping rules from snapshot states to regime labels.
+  - Added deterministic rationale builder for mapped regime outputs.
+  - Added mapping tests for core labels and degraded/unknown gating behavior.
+  - Added canonical mapping-rules documentation.
+- **Files changed**:
+  - `domain/macro/regime_mapping.py`
+  - `domain/macro/__init__.py`
+  - `tests/unit/domain/macro/test_regime_mapping.py`
+  - `docs/regime_mapping_rules.md`
+  - `README.md`
+  - `backlog/0303-snapshot_to_regime_mapping_rules.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format domain\\macro\\regime_mapping.py domain\\macro\\__init__.py tests\\unit\\domain\\macro\\test_regime_mapping.py`
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_regime_mapping.py tests\\unit\\domain\\macro\\test_regime_schema.py -q`
+- **Result**: Snapshot state -> regime label mapping is deterministic and reviewable.
+- **Next task**: `0304-regime_confidence_and_degraded_handling.md`
+- **Commit message**: `feat(regime): add deterministic snapshot-to-regime mapping`

@@ -41,3 +41,9 @@
 - **Reason**: Prevent inconsistent label/family combinations and keep vocabulary truthful before builder/mapping expansion.
 - **Tradeoff**: Callers must provide aligned label/family pairs or receive validation errors.
 - **Follow-up**: Reuse this mapping in snapshot-to-regime rule implementation (0303).
+
+## 2026-04-17 — Ordered snapshot-to-regime rule evaluation
+- **Decision**: Apply regime mapping rules in explicit order with hard gate rules (`missing/stale -> unclear`, unknown states -> mixed) before thematic labels.
+- **Reason**: Avoid overconfident labels when data quality is degraded or state coverage is incomplete.
+- **Tradeoff**: Some edge snapshots collapse into `mixed/unclear` rather than more specific labels.
+- **Follow-up**: Add confidence layer in 0304 and transition tuning in 0307.

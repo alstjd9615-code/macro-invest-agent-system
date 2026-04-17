@@ -58,5 +58,6 @@ docker compose up -d
 - Snapshot state derivation rules: `docs/state_derivation_rules.md`
 - Regime contract: `docs/regime_schema.md`
 - Regime vocabulary: `docs/regime_vocabulary.md`
+- Regime mapping rules: `docs/regime_mapping_rules.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

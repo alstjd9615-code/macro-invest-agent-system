@@ -18,6 +18,11 @@ from domain.macro.regime import (
     RegimeTransitionType,
     regime_family_for_label,
 )
+from domain.macro.regime_mapping import (
+    build_regime_rationale,
+    map_snapshot_to_regime,
+    map_snapshot_to_regime_label,
+)
 
 __all__ = [
     "MacroIndicatorType",
@@ -34,6 +39,9 @@ __all__ = [
     "RegimeConfidence",
     "REGIME_LABEL_FAMILY_MAP",
     "regime_family_for_label",
+    "map_snapshot_to_regime_label",
+    "map_snapshot_to_regime",
+    "build_regime_rationale",
     "RegimeTransitionType",
     "RegimeTransition",
     "MacroRegime",

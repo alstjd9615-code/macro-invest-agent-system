@@ -11,6 +11,8 @@
 - Added canonical docs: `docs/snapshot_schema.md`, `docs/state_derivation_rules.md`.
 - Added Phase 3 regime schema contracts and canonical regime schema doc.
 - Added canonical regime vocabulary reference doc (`docs/regime_vocabulary.md`).
+- Added deterministic snapshot-to-regime mapping rules and mapping tests.
+- Added canonical mapping rules doc (`docs/regime_mapping_rules.md`).
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.
