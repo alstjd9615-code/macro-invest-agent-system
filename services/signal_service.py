@@ -1,6 +1,7 @@
 """Signal evaluation service implementation skeleton."""
 
 from core.logging.logger import get_logger
+from core.metrics import SIGNAL_GENERATION_DURATION
 from core.tracing import get_tracer
 from core.tracing.span_attributes import SIGNAL_COUNT
 from domain.macro.models import MacroSnapshot
@@ -79,7 +80,8 @@ class SignalService(SignalServiceInterface):
         )
         with _tracer.start_as_current_span("service.run_signal_engine") as span:
             span.set_attribute("signal.definitions_count", len(signal_definitions))
-            result = await self.engine.run(signal_definitions, snapshot)
+            with SIGNAL_GENERATION_DURATION.time():
+                result = await self.engine.run(signal_definitions, snapshot)
             span.set_attribute(SIGNAL_COUNT, len(result.signals))
         _log.debug(
             "service_fetch_complete",

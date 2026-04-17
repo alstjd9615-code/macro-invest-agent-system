@@ -136,8 +136,20 @@ macro-invest-agent-platform/
 │   └── mcp/                       # Tests for MCP schema validation and tool logic
 │
 ├── docs/
-│   └── adr/                       # Architecture Decision Records
-│       └── 001-deterministic-core-and-agent-separation.md
+│   ├── adr/                       # Architecture Decision Records
+│   │   └── 001-deterministic-core-and-agent-separation.md
+│   ├── alerts/
+│   │   └── prometheus_rules.yml   # Prometheus alert rule definitions
+│   ├── dashboards/
+│   │   └── macro_platform_overview.json  # Grafana dashboard (auto-provisioned)
+│   ├── runbooks/                  # Operational runbooks for key alert scenarios
+│   ├── deployment.md              # Deployment guide, health checks, rollback
+│   ├── metrics.md                 # Prometheus metric catalogue
+│   └── observability.md           # Tracing and structured logging guide
+│
+├── deploy/
+│   ├── prometheus.yml             # Prometheus scrape config
+│   └── grafana/provisioning/      # Grafana datasource + dashboard provisioning
 │
 ├── .env.example                   # Environment variable template
 ├── docker-compose.yml             # Local development infrastructure
@@ -398,9 +410,7 @@ print(result.signal_direction, result.confidence_score)
 ### Phase 5 — Observability and Operations
 
 - [x] **PR1 — End-to-end tracing**: OpenTelemetry spans across agent → MCP adapter → MCP tools → services → ingestion pipeline; OTel/structlog bridge for log–trace correlation; `core/tracing/` module; updated `docs/observability.md`
-- [ ] PR2 — Metrics and dashboards (Prometheus / Grafana)
-- [ ] PR3 — Alert rules and operational runbooks
-- [ ] PR4 — Deployment hardening and operational safety
+- [x] **PR2/3/4 — Metrics, Alerts, and Deployment**: Prometheus metrics (`core/metrics/`), Grafana dashboard, alert rules, operational runbooks, FastAPI app with `/health` `/readiness` `/metrics` endpoints, updated `docker-compose.yml` with Prometheus + Grafana.
 
 ---
 

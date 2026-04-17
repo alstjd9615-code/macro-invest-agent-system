@@ -1,0 +1,204 @@
+---
+# Prometheus alert rules for the macro-invest-agent-platform.
+#
+# Load with:
+#   prometheus --config.file=prometheus.yml
+# where prometheus.yml includes:
+#   rule_files:
+#     - /path/to/docs/alerts/prometheus_rules.yml
+#
+# Thresholds are calibrated for a single-instance staging/production
+# deployment.  Adjust `for:` durations and thresholds after observing
+# your baseline traffic.
+#
+# Every alert links to a runbook in docs/runbooks/.
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Agent runtime
+  # ---------------------------------------------------------------------------
+  - name: agent_runtime
+    rules:
+
+      - alert: AgentHighErrorRate
+        expr: |
+          (
+            sum by (operation) (rate(macro_platform_agent_requests_total{result="failure"}[5m]))
+            /
+            sum by (operation) (rate(macro_platform_agent_requests_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Agent error rate > 10% for {{ $labels.operation }}"
+          description: >
+            The agent operation {{ $labels.operation }} has an error rate of
+            {{ $value | humanizePercentage }} over the last 5 minutes.
+            Investigate upstream MCP tool failures or schema regressions.
+          runbook: "docs/runbooks/pipeline_stuck_or_failing.md"
+
+      - alert: AgentHighLatencyP99
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (operation, le) (rate(macro_platform_agent_request_duration_seconds_bucket[5m]))
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Agent p99 latency > 10 s for {{ $labels.operation }}"
+          description: >
+            The p99 latency for agent operation {{ $labels.operation }} is
+            {{ $value | humanizeDuration }}.  Check provider fetch latency
+            and MCP tool duration for the root cause.
+          runbook: "docs/runbooks/provider_data_unavailable.md"
+
+      - alert: SchemaValidationFailures
+        expr: |
+          increase(macro_platform_schema_validation_failures_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Schema validation failures detected for {{ $labels.response_type }}"
+          description: >
+            {{ $value }} schema validation failure(s) occurred in the last 10 minutes
+            for response type {{ $labels.response_type }}.
+            This is typically caused by a code change that breaks the Pydantic model
+            contract.  Roll back or fix immediately.
+          runbook: "docs/runbooks/schema_regression_after_deploy.md"
+
+  # ---------------------------------------------------------------------------
+  # MCP tools
+  # ---------------------------------------------------------------------------
+  - name: mcp_tools
+    rules:
+
+      - alert: MCPToolHighErrorRate
+        expr: |
+          (
+            sum by (tool) (rate(macro_platform_mcp_tool_calls_total{result="failure"}[5m]))
+            /
+            sum by (tool) (rate(macro_platform_mcp_tool_calls_total[5m]))
+          ) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "MCP tool {{ $labels.tool }} error rate > 15%"
+          description: >
+            Tool {{ $labels.tool }} is failing at
+            {{ $value | humanizePercentage }} over 5 minutes.
+            Investigate provider connectivity or downstream service errors.
+          runbook: "docs/runbooks/provider_data_unavailable.md"
+
+  # ---------------------------------------------------------------------------
+  # Provider fetches
+  # ---------------------------------------------------------------------------
+  - name: provider_fetches
+    rules:
+
+      - alert: ProviderHighErrorRate
+        expr: |
+          (
+            sum by (provider) (rate(macro_platform_provider_fetch_total{result="failure"}[5m]))
+            /
+            sum by (provider) (rate(macro_platform_provider_fetch_total[5m]))
+          ) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Provider {{ $labels.provider }} fetch failure rate > 20%"
+          description: >
+            Provider {{ $labels.provider }} is failing at
+            {{ $value | humanizePercentage }} over 5 minutes.
+            Check network connectivity, API key validity, and provider status
+            pages.
+          runbook: "docs/runbooks/provider_data_unavailable.md"
+
+      - alert: ProviderSlowFetches
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (provider, le) (rate(macro_platform_provider_fetch_duration_seconds_bucket[5m]))
+          ) > 8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Provider {{ $labels.provider }} p95 fetch latency > 8 s"
+          description: >
+            Provider {{ $labels.provider }} p95 latency is
+            {{ $value | humanizeDuration }}.  The platform default timeout is
+            10 s; sustained latency near the limit risks cascading timeouts.
+          runbook: "docs/runbooks/provider_data_unavailable.md"
+
+  # ---------------------------------------------------------------------------
+  # Ingestion pipeline
+  # ---------------------------------------------------------------------------
+  - name: pipeline
+    rules:
+
+      - alert: PipelineConsecutiveFailures
+        expr: |
+          increase(macro_platform_pipeline_runs_total{result="failure"}[30m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Pipeline source {{ $labels.source }} has ≥ 3 failures in 30 m"
+          description: >
+            The ingestion pipeline for source {{ $labels.source }} has failed
+            {{ $value }} times in the last 30 minutes.  Feature store data may
+            become stale if this is not resolved.
+          runbook: "docs/runbooks/pipeline_stuck_or_failing.md"
+
+      - alert: PipelineSlowRuns
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (source, le) (rate(macro_platform_pipeline_run_duration_seconds_bucket[30m]))
+          ) > 90
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pipeline source {{ $labels.source }} p95 duration > 90 s"
+          description: >
+            Ingestion pipeline for source {{ $labels.source }} p95 duration is
+            {{ $value | humanizeDuration }}.  This may indicate a provider
+            slowdown or increased data volume.
+          runbook: "docs/runbooks/pipeline_stuck_or_failing.md"
+
+  # ---------------------------------------------------------------------------
+  # Platform health
+  # ---------------------------------------------------------------------------
+  - name: platform_health
+    rules:
+
+      - alert: MetricsEndpointDown
+        expr: |
+          absent(macro_platform_agent_requests_total) == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Macro platform metrics are absent — possible process down"
+          description: >
+            No agent request metrics have been scraped for 5 minutes.
+            The application process may have crashed or the /metrics endpoint
+            is unreachable.
+          runbook: "docs/runbooks/visibility_gap.md"

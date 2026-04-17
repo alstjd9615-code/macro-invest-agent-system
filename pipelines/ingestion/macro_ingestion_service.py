@@ -26,6 +26,7 @@ from core.contracts.feature_store_repository import FeatureStoreRepositoryContra
 from core.contracts.macro_data_source import MacroDataSourceContract
 from core.exceptions.base import ProviderError
 from core.logging.logger import get_logger
+from core.metrics import PIPELINE_RUN_DURATION, PIPELINE_RUNS_TOTAL
 from core.tracing import get_tracer
 from core.tracing.span_attributes import (
     COUNTRY,
@@ -104,50 +105,55 @@ class MacroIngestionService:
                 requested indicators.
         """
         effective_indicators = indicators if indicators is not None else DEFAULT_INDICATORS
+        source_id = self._source.source_id
         _log.info(
             "ingestion_started",
             country=country,
-            source=self._source.source_id,
+            source=source_id,
             indicator_count=len(effective_indicators),
         )
 
         with _tracer.start_as_current_span("pipeline.ingest") as span:
             span.set_attribute(COUNTRY, country)
-            span.set_attribute(SOURCE_ID, self._source.source_id)
+            span.set_attribute(SOURCE_ID, source_id)
             span.set_attribute(INDICATOR_COUNT, len(effective_indicators))
 
-            try:
-                raw_features = await self._source.fetch_raw(
-                    country=country, indicators=effective_indicators
-                )
-            except ProviderError as exc:
-                _log.warning(
-                    "ingestion_provider_error",
+            with PIPELINE_RUN_DURATION.labels(source=source_id).time():
+                try:
+                    raw_features = await self._source.fetch_raw(
+                        country=country, indicators=effective_indicators
+                    )
+                except ProviderError as exc:
+                    _log.warning(
+                        "ingestion_provider_error",
+                        country=country,
+                        source=source_id,
+                        failure_category=exc.error_code,
+                        error=str(exc),
+                    )
+                    PIPELINE_RUNS_TOTAL.labels(source=source_id, result="failure").inc()
+                    raise
+
+                if not raw_features:
+                    PIPELINE_RUNS_TOTAL.labels(source=source_id, result="failure").inc()
+                    raise RuntimeError(
+                        f"No macro features returned for country={country!r} "
+                        f"from source={source_id!r}. "
+                        f"Requested indicators: {effective_indicators}"
+                    )
+
+                snapshot = FeatureSnapshot(
                     country=country,
-                    source=self._source.source_id,
-                    failure_category=exc.error_code,
-                    error=str(exc),
-                )
-                raise
-
-            if not raw_features:
-                raise RuntimeError(
-                    f"No macro features returned for country={country!r} "
-                    f"from source={self._source.source_id!r}. "
-                    f"Requested indicators: {effective_indicators}"
+                    source_id=source_id,
+                    features=raw_features,
                 )
 
-            snapshot = FeatureSnapshot(
-                country=country,
-                source_id=self._source.source_id,
-                features=raw_features,
-            )
-
-            await self._repository.save_snapshot(snapshot)
+                await self._repository.save_snapshot(snapshot)
 
             span.set_attribute(PIPELINE_RUN_ID, snapshot.snapshot_id)
             span.set_attribute(FEATURES_COUNT, snapshot.features_count)
 
+        PIPELINE_RUNS_TOTAL.labels(source=source_id, result="success").inc()
         _log.info(
             "ingestion_complete",
             country=country,

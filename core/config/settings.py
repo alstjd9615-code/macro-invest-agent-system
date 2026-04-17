@@ -139,6 +139,19 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Prometheus metrics
+    # ------------------------------------------------------------------
+
+    metrics_enabled: bool = Field(
+        default=True,
+        description="When True, expose Prometheus metrics via the /metrics endpoint.",
+    )
+    metrics_namespace: str = Field(
+        default="macro_platform",
+        description="Prometheus metric name prefix (namespace).",
+    )
+
+    # ------------------------------------------------------------------
     # Convenience helpers
     # ------------------------------------------------------------------
 
