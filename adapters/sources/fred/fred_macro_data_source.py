@@ -28,9 +28,10 @@ from adapters.sources.fred.normalizer import normalize_fred_observation
 from adapters.sources.fred.series_map import FRED_SERIES_MAP
 from core.contracts.macro_data_source import MacroDataSourceContract, SourceMetadata
 from core.exceptions.base import ProviderHTTPError, ProviderNetworkError, ProviderTimeoutError
+from core.logging.logger import get_logger
+from core.metrics import PROVIDER_FETCH_DURATION, PROVIDER_FETCH_TOTAL
 from domain.macro.enums import MacroIndicatorType
 from domain.macro.models import MacroFeature
-from core.logging.logger import get_logger
 
 _log = get_logger(__name__)
 
@@ -131,7 +132,12 @@ class FredMacroDataSource(MacroDataSourceContract):
             _log.debug("fred_fetch_started", series_id=series_id, country=country)
             import time as _time
             _start = _time.perf_counter_ns()
-            raw_value_str, obs_date = self._fetch_latest_observation(series_id)
+            try:
+                with PROVIDER_FETCH_DURATION.labels(provider="fred").time():
+                    raw_value_str, obs_date = self._fetch_latest_observation(series_id)
+            except Exception:
+                PROVIDER_FETCH_TOTAL.labels(provider="fred", result="failure").inc()
+                raise
             _latency_ms = (_time.perf_counter_ns() - _start) / 1_000_000.0
             if raw_value_str is None:
                 _log.debug(
@@ -141,6 +147,7 @@ class FredMacroDataSource(MacroDataSourceContract):
                     latency_ms=round(_latency_ms, 3),
                     result="no_observations",
                 )
+                PROVIDER_FETCH_TOTAL.labels(provider="fred", result="success").inc()
                 continue  # FRED returned no observations
 
             feature = normalize_fred_observation(
@@ -158,6 +165,7 @@ class FredMacroDataSource(MacroDataSourceContract):
                     latency_ms=round(_latency_ms, 3),
                     result="ok",
                 )
+                PROVIDER_FETCH_TOTAL.labels(provider="fred", result="success").inc()
                 features.append(feature)
 
         return features

@@ -25,6 +25,7 @@ from agent.schemas import (
     SignalReviewResponse,
     SnapshotComparisonResponse,
 )
+from core.metrics import SCHEMA_VALIDATION_FAILURES_TOTAL
 
 
 class OutputValidationError(Exception):
@@ -69,6 +70,7 @@ def validate_agent_response(response: AgentResponse) -> AgentResponse:
     try:
         response_cls.model_validate(response.model_dump())
     except ValidationError as exc:
+        SCHEMA_VALIDATION_FAILURES_TOTAL.labels(response_type=response_cls.__name__).inc()
         raise OutputValidationError(
             detail=(
                 f"Agent response failed schema validation (type={response_cls.__name__}): {exc}"

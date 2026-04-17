@@ -23,6 +23,7 @@ Design constraints
 
 from __future__ import annotations
 
+import time
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -39,6 +40,7 @@ from agent.schemas import (
 from agent.service import AgentService
 from core.logging.logger import bind_request_context, get_logger, set_trace_id
 from core.logging.timing import timed_operation
+from core.metrics import AGENT_REQUEST_DURATION, AGENT_REQUESTS_TOTAL
 from core.tracing import get_tracer
 from core.tracing.span_attributes import (
     AGENT_OPERATION,
@@ -210,12 +212,28 @@ class AgentRuntime:
             if session_id:
                 span.set_attribute(SESSION_ID, session_id)
 
-            if isinstance(request, SignalReviewRequest):
-                result = await self._invoke_review_signals(request)
-            elif isinstance(request, MacroSnapshotSummaryRequest):
-                result = await self._invoke_summarize_snapshot(request)
-            else:
-                result = await self._invoke_compare_snapshots(request)
+            _start = time.perf_counter()
+            try:
+                if isinstance(request, SignalReviewRequest):
+                    result = await self._invoke_review_signals(request)
+                elif isinstance(request, MacroSnapshotSummaryRequest):
+                    result = await self._invoke_summarize_snapshot(request)
+                else:
+                    result = await self._invoke_compare_snapshots(request)
+            except Exception:
+                AGENT_REQUEST_DURATION.labels(operation=operation.value).observe(
+                    time.perf_counter() - _start
+                )
+                AGENT_REQUESTS_TOTAL.labels(operation=operation.value, result="failure").inc()
+                raise
+
+            AGENT_REQUEST_DURATION.labels(operation=operation.value).observe(
+                time.perf_counter() - _start
+            )
+            AGENT_REQUESTS_TOTAL.labels(
+                operation=operation.value,
+                result="success" if result.success else "failure",
+            ).inc()
 
             span.set_attribute(RESULT_SUCCESS, result.success)
 

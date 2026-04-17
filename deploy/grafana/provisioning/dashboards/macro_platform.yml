@@ -1,0 +1,10 @@
+# Grafana dashboard provisioning — loads dashboards from /var/lib/grafana/dashboards.
+apiVersion: 1
+
+providers:
+  - name: macro-platform
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

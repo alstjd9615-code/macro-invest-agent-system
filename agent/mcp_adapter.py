@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from core.logging.logger import get_logger
 from core.logging.timing import timed_operation
+from core.metrics import MCP_TOOL_CALLS_TOTAL, MCP_TOOL_DURATION
 from core.tracing import get_tracer
 from core.tracing.span_attributes import COUNTRY, MCP_TOOL, REQUEST_ID, RESULT_SUCCESS
 from domain.signals.registry import SignalRegistry, default_registry
@@ -98,8 +99,9 @@ class MCPAdapter:
             span.set_attribute(MCP_TOOL, "get_macro_snapshot")
             span.set_attribute(REQUEST_ID, request_id)
             span.set_attribute(COUNTRY, country)
-            async with timed_operation("mcp_adapter", "get_macro_snapshot", _log):
-                response = await handle_get_macro_snapshot(request, self._macro_service)
+            with MCP_TOOL_DURATION.labels(tool="get_macro_snapshot").time():
+                async with timed_operation("mcp_adapter", "get_macro_snapshot", _log):
+                    response = await handle_get_macro_snapshot(request, self._macro_service)
             span.set_attribute(RESULT_SUCCESS, response.success)
 
         if not response.success:
@@ -108,8 +110,10 @@ class MCPAdapter:
                 tool="get_macro_snapshot",
                 error=response.error_message,
             )
+            MCP_TOOL_CALLS_TOTAL.labels(tool="get_macro_snapshot", result="failure").inc()
             raise MCPToolError("get_macro_snapshot", response.error_message or "unknown error")
 
+        MCP_TOOL_CALLS_TOTAL.labels(tool="get_macro_snapshot", result="success").inc()
         _log.debug("tool_done", tool="get_macro_snapshot", success=True)
         return response
 
@@ -144,13 +148,14 @@ class MCPAdapter:
             span.set_attribute(REQUEST_ID, request_id)
             span.set_attribute(COUNTRY, country)
             span.set_attribute("signal.ids_count", len(signal_ids))
-            async with timed_operation("mcp_adapter", "run_signal_engine", _log):
-                response = await handle_run_signal_engine(
-                    request=request,
-                    macro_service=self._macro_service,
-                    signal_service=self._signal_service,
-                    registry=self._registry,
-                )
+            with MCP_TOOL_DURATION.labels(tool="run_signal_engine").time():
+                async with timed_operation("mcp_adapter", "run_signal_engine", _log):
+                    response = await handle_run_signal_engine(
+                        request=request,
+                        macro_service=self._macro_service,
+                        signal_service=self._signal_service,
+                        registry=self._registry,
+                    )
             span.set_attribute(RESULT_SUCCESS, response.success)
 
         if not response.success:
@@ -159,7 +164,9 @@ class MCPAdapter:
                 tool="run_signal_engine",
                 error=response.error_message,
             )
+            MCP_TOOL_CALLS_TOTAL.labels(tool="run_signal_engine", result="failure").inc()
             raise MCPToolError("run_signal_engine", response.error_message or "unknown error")
 
+        MCP_TOOL_CALLS_TOTAL.labels(tool="run_signal_engine", result="success").inc()
         _log.debug("tool_done", tool="run_signal_engine", success=True)
         return response
