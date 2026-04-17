@@ -109,3 +109,32 @@
 - **Result**: Documentation now follows canonical-source policy with reduced duplication.
 - **Next task**: Next unfinished backlog item in lexical order.
 - **Commit message**: `docs(structure): align repo docs to role-separated canonical policy`
+
+## 2026-04-17T14:10:38.072Z
+- **Task name**: 0201 — Phase 2 snapshot contract, builder, and comparison baseline
+- **Status**: DONE
+- **Summary of changes**:
+  - Added canonical Phase 2 snapshot contract models and category state vocabularies.
+  - Added deterministic state derivation utilities and snapshot comparison metadata logic.
+  - Added snapshot builder service and in-memory snapshot persistence repository.
+  - Added tests for derivation, freshness/degraded propagation, builder, and comparison.
+  - Added canonical snapshot docs (`snapshot_schema`, `state_derivation_rules`) and README links.
+- **Files changed**:
+  - `domain/macro/snapshot.py`
+  - `core/contracts/macro_snapshot_repository.py`
+  - `adapters/repositories/in_memory_macro_snapshot_store.py`
+  - `services/macro_snapshot_service.py`
+  - `tests/unit/domain/macro/test_snapshot.py`
+  - `tests/unit/services/test_macro_snapshot_service.py`
+  - `docs/snapshot_schema.md`
+  - `docs/state_derivation_rules.md`
+  - `docs/roadmap.md`
+  - `README.md`
+  - `backlog/0201-phase2-snapshot-contract-builder-and-compare.md`
+  - `logs/progress.md`
+- **Validation performed**:
+  - `uv run ruff format ...` on snapshot-layer files
+  - `.venv\\Scripts\\python -m pytest tests\\unit\\domain\\macro\\test_snapshot.py tests\\unit\\services\\test_macro_snapshot_service.py tests\\unit\\domain\\macro\\test_comparison.py -q`
+- **Result**: Phase 2 snapshot contract/builder/comparison baseline is implemented and tested.
+- **Next task**: Next unfinished Phase 2 backlog item in lexical order.
+- **Commit message**: `feat(snapshot): add phase2 snapshot contract builder and comparison baseline`

@@ -10,8 +10,8 @@ Macroeconomic data ingestion and analysis platform for deterministic investment 
 
 ## Current status
 
-- **Phase 1 (Macro Data Foundation): in progress**
-- Priority ingestion foundation implemented for CPI, Unemployment, 10Y Yield, PMI, Retail Sales.
+- **Phase 1 (Macro Data Foundation): baseline complete**
+- **Phase 2 (Macro Snapshot Layer): in progress**
 
 ## Local run (quickstart)
 
@@ -40,6 +40,7 @@ docker compose up -d
 
 - **Domain/Core**: deterministic macro + signal models and rules.
 - **Pipelines**: macro ingestion and normalization workflows.
+- **Snapshot layer**: deterministic macro state structuring and comparison.
 - **API**: analyst-facing read API.
 - **Observability**: Prometheus metrics + Grafana dashboards.
 
@@ -51,5 +52,7 @@ docker compose up -d
 - Ingestion behavior/flow: `docs/ingestion_design.md`
 - Storage schema/rules: `docs/storage_schema.md`
 - Freshness policy: `docs/freshness_policy.md`
+- Snapshot contract: `docs/snapshot_schema.md`
+- Snapshot state derivation rules: `docs/state_derivation_rules.md`
 - Metrics reference: `docs/metrics.md`
 - Deployment: `docs/deployment.md`

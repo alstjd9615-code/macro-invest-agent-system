@@ -7,6 +7,8 @@
 - Added Phase 1 indicator catalog and ingestion job definitions for a priority starter set.
 - Added Phase 1 normalization and ingestion-run tracking models.
 - Added `docs/phase1_macro_data_foundation.md`.
+- Added Phase 2 snapshot contract, builder service, in-memory snapshot repository, and comparison metadata baseline.
+- Added canonical docs: `docs/snapshot_schema.md`, `docs/state_derivation_rules.md`.
 
 ### Changed
 - Updated default ingestion indicators to a focused Phase 1 starter set.

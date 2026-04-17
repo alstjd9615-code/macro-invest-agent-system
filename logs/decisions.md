@@ -23,3 +23,9 @@
 - **Reason**: Reduce duplication/drift and make ownership of each topic explicit.
 - **Tradeoff**: Existing long-form mixed docs were reduced or linked instead of repeated.
 - **Follow-up**: Continue consolidating any remaining overlapping legacy docs into canonical files.
+
+## 2026-04-17 — Phase 2 snapshot-first implementation
+- **Decision**: Implement Phase 2 in order: snapshot contract → derivation logic → persistence → tests → docs.
+- **Reason**: Current stage prioritizes truthful domain contracts over surface/API expansion.
+- **Tradeoff**: Snapshot logic is currently service/domain-centric and not yet expanded into broader product surfaces.
+- **Follow-up**: Add next Phase 2 backlog tasks for API contract wiring only after domain/persistence coverage is stable.
