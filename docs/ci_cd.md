@@ -79,6 +79,18 @@ curl -s http://localhost:8000/health
 curl -s http://localhost:8000/readiness
 # Expected: {"status":"ready","env":"local"}
 
+# Regime latest (returns 404 until a regime is persisted — that is expected)
+curl -s http://localhost:8000/api/regimes/latest
+# Expected: 200 with regime JSON, or 404 {"detail":"No persisted regime available"}
+
+# Regime compare (returns 404 until a regime is persisted — that is expected)
+curl -s http://localhost:8000/api/regimes/compare
+# Expected: 200 with compare JSON, or 404 {"detail":"No regime available on or before ..."}
+
+# Snapshot latest (returns synthetic data)
+curl -s http://localhost:8000/api/snapshots/latest
+# Expected: 200 with features and trust block
+
 # Dashboard
 open http://localhost:8080
 ```
