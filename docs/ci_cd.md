@@ -1,14 +1,11 @@
 # CI/CD Quick Guide
 
-This repository uses separate GitHub Actions workflows for CI and CD.
+This repository uses GitHub Actions for CI only.
+**CD is disabled** — the project is currently deployed manually via Docker Compose.
 
-## Branch flow
+---
 
-- Feature work: push to feature branches + open pull request.
-- Mainline deploy: merge/push to `main` only.
-- CD never runs from feature branches.
-
-## CI trigger behavior
+## CI pipeline
 
 Workflow: `.github/workflows/ci.yml`
 
@@ -16,54 +13,120 @@ Triggers:
 - `pull_request`
 - `push` (all branches)
 
-Checks:
-1. Backend dependency install (`uv sync --all-extras`)
-2. Backend test execution (`uv run pytest tests -q`)
-3. Frontend dependency install
-   - if `frontend/package.json` exists: `npm ci`
-   - otherwise static frontend mode (no npm deps)
-4. Frontend production build
-   - if `frontend/package.json` exists: `npm run build`
-   - otherwise Docker build of frontend image
-5. Optional Docker smoke build (API + frontend images)
+Jobs (run in parallel):
 
-## CD trigger behavior
+| Job | Command | Purpose |
+|-----|---------|---------|
+| **lint** | `uv run ruff check .` | Ruff lint check |
+| **typecheck** | `uv run mypy .` | Mypy strict type check |
+| **tests** | `uv run pytest tests --cov` | pytest + coverage |
+| **docker-build** | `docker build -f ...` | Verify both Docker images build |
 
-Workflow: `.github/workflows/cd.yml`
+No secrets are required for CI.
 
-Triggers:
-- `push` to `main`
-- manual `workflow_dispatch`
+---
 
-Deploy flow:
-1. Validate required secrets
-2. SSH to deploy host
-3. Sync repository to `origin/main`
-4. Rebuild/restart services via Docker Compose
-5. Run post-deploy health checks (`/health`, frontend root)
+## CD status: disabled
 
-## Required secrets
+The CD workflow (`.github/workflows/cd.yml`) is **disabled**.  
+No remote deployment is configured.
 
-Set these in repository **Settings → Secrets and variables → Actions**:
+All deployments are performed manually — see the local workflow below.
 
-- `DEPLOY_HOST`: target server hostname/IP
-- `DEPLOY_USER`: SSH username
-- `DEPLOY_SSH_KEY`: private SSH key (PEM format)
-- `DEPLOY_PATH`: absolute path to checked-out repo on target server
-- `DEPLOY_PORT` (optional): SSH port, defaults to `22`
+---
 
-Environment-specific values (host/user/path/port) must be configured per target environment.
+## Local deployment workflow
 
-## Manual fallback commands
-
-Run on deployment server:
+### 1. Pull latest code
 
 ```bash
-cd <DEPLOY_PATH>
-git fetch --all --prune
-git checkout main
-git reset --hard origin/main
-docker compose up -d --build --remove-orphans
-curl -f http://localhost:8000/health
-curl -f http://localhost:8080/
+git pull origin main
 ```
+
+### 2. Rebuild and start all services
+
+```bash
+docker compose up -d --build
+```
+
+This builds and starts:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| `api` | `8000` | FastAPI backend |
+| `frontend` | `8080` | Analyst dashboard |
+| `postgres` | `5432` | Feature/signal persistence |
+| `minio` | `9000` / `9001` | Object store |
+| `prometheus` | `9090` | Metrics |
+| `grafana` | `3000` | Dashboards |
+
+### 3. Verify containers are running
+
+```bash
+docker compose ps
+```
+
+All containers should show `healthy` or `running`.
+
+### 4. Smoke checks
+
+```bash
+# API liveness
+curl -s http://localhost:8000/health
+# Expected: {"status":"ok"}
+
+# API readiness
+curl -s http://localhost:8000/readiness
+# Expected: {"status":"ready","env":"local"}
+
+# Dashboard
+open http://localhost:8080
+```
+
+### 5. View logs
+
+```bash
+docker compose logs -f api
+docker compose logs -f frontend
+```
+
+### 6. Stop all services
+
+```bash
+docker compose down
+```
+
+---
+
+## Running CI checks locally
+
+```bash
+# Lint
+uv run ruff check .
+
+# Type check
+uv run mypy .
+
+# Tests with coverage
+uv run pytest tests --cov --cov-report=term-missing -q
+```
+
+---
+
+## Required environment variables
+
+Copy the template and fill in values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | DB username | `macro_user` |
+| `POSTGRES_PASSWORD` | DB password | `macro_pass` |
+| `POSTGRES_DB` | Database name | `macro_db` |
+| `MINIO_ROOT_USER` | MinIO admin user | `minioadmin` |
+| `MINIO_ROOT_PASSWORD` | MinIO admin password | `minioadmin` |
+| `FRED_API_KEY` | FRED API key (for live data) | _(empty, uses synthetic data)_ |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password | `admin` |

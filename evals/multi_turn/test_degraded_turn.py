@@ -66,7 +66,7 @@ class TestDegradedTurnEval:
         )
         timeout_exc = ProviderTimeoutError("FRED timed out", provider_id="fred", timeout_s=10.0)
         with patch.object(
-            runtime._service._macro_service,  # type: ignore[attr-defined]
+            runtime._service._macro_service,
             "get_snapshot",
             new=AsyncMock(side_effect=timeout_exc),
         ):
@@ -99,7 +99,7 @@ class TestDegradedTurnEval:
         )
         timeout_exc = ProviderTimeoutError("timed out", provider_id="fred")
         with patch.object(
-            runtime._service._macro_service,  # type: ignore[attr-defined]
+            runtime._service._macro_service,
             "get_snapshot",
             new=AsyncMock(side_effect=timeout_exc),
         ):

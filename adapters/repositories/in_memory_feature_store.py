@@ -18,7 +18,12 @@ Design notes
 from __future__ import annotations
 
 from core.contracts.feature_store_repository import FeatureStoreRepositoryContract
-from pipelines.ingestion.models import FeatureSnapshot
+from pipelines.ingestion.models import (
+    FeatureSnapshot,
+    IngestionRunRecord,
+    NormalizedMacroObservation,
+    RawFeatureRecord,
+)
 
 
 class InMemoryFeatureStore(FeatureStoreRepositoryContract):
@@ -36,6 +41,9 @@ class InMemoryFeatureStore(FeatureStoreRepositoryContract):
 
     def __init__(self) -> None:
         self._snapshots: list[FeatureSnapshot] = []
+        self._raw_records: dict[str, list[RawFeatureRecord]] = {}
+        self._normalized_records: dict[str, list[NormalizedMacroObservation]] = {}
+        self._ingestion_runs: list[IngestionRunRecord] = []
 
     async def save_snapshot(self, snapshot: object) -> None:
         """Append a snapshot to the in-memory store.
@@ -95,3 +103,63 @@ class InMemoryFeatureStore(FeatureStoreRepositoryContract):
             All stored snapshots in insertion order.
         """
         return list(self._snapshots)
+
+    async def save_raw_records(
+        self, snapshot_id: str, records: list[RawFeatureRecord]
+    ) -> None:
+        """Persist raw feature records for a snapshot.
+
+        Args:
+            snapshot_id: Snapshot identifier these records belong to.
+            records: Raw feature records to persist.
+        """
+        self._raw_records[snapshot_id] = list(records)
+
+    async def save_normalized_records(
+        self, snapshot_id: str, records: list[NormalizedMacroObservation]
+    ) -> None:
+        """Persist normalized observations for a snapshot.
+
+        Args:
+            snapshot_id: Snapshot identifier these records belong to.
+            records: Normalized observation records to persist.
+        """
+        self._normalized_records[snapshot_id] = list(records)
+
+    async def save_ingestion_run(self, run_record: IngestionRunRecord) -> None:
+        """Persist an ingestion run record.
+
+        Args:
+            run_record: Ingestion run metadata to persist.
+        """
+        self._ingestion_runs.append(run_record)
+
+    def raw_records(self, snapshot_id: str) -> list[RawFeatureRecord]:
+        """Return raw records for a snapshot (for test introspection).
+
+        Args:
+            snapshot_id: Snapshot identifier to look up.
+
+        Returns:
+            List of raw feature records, or empty list if none stored.
+        """
+        return list(self._raw_records.get(snapshot_id, []))
+
+    def normalized_records(self, snapshot_id: str) -> list[NormalizedMacroObservation]:
+        """Return normalized observations for a snapshot (for test introspection).
+
+        Args:
+            snapshot_id: Snapshot identifier to look up.
+
+        Returns:
+            List of normalized observations, or empty list if none stored.
+        """
+        return list(self._normalized_records.get(snapshot_id, []))
+
+    def ingestion_runs(self) -> list[IngestionRunRecord]:
+        """Return all ingestion run records (for test introspection).
+
+        Returns:
+            All ingestion run records in insertion order.
+        """
+        return list(self._ingestion_runs)

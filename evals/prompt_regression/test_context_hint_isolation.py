@@ -8,15 +8,11 @@ Verifies that:
 
 from __future__ import annotations
 
-import pytest
-
 from agent.prompts.templates import (
-    SNAPSHOT_SUMMARY_SYSTEM_MESSAGE,
     render_signal_review_summary,
     render_snapshot_comparison_summary,
     render_snapshot_summary,
 )
-
 
 _CONTEXT_HINT = "country=US, timeframe=Q1-2026"
 

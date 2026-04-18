@@ -71,8 +71,6 @@ select = [
     "N",   # pep8-naming
 ]
 ignore = [
-    "ANN101", # missing type annotation for self
-    "ANN102", # missing type annotation for cls
     "E501",   # line too long (handled by formatter)
     "B008",   # function call in argument defaults (FastAPI Depends/Query pattern)
 ]
@@ -87,3 +85,10 @@ line-ending = "lf"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agent", "apps", "core", "domain", "evals", "mcp", "pipelines"]
+
+[tool.coverage.run]
+source = ["agent", "apps", "core", "domain", "pipelines", "services", "adapters"]
+omit = ["tests/*", "evals/*"]
+
+[tool.coverage.report]
+skip_empty = true

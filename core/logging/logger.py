@@ -156,7 +156,7 @@ def _inject_otel_ids(
     """
     from core.tracing.tracer import inject_otel_context_into_structlog
 
-    return inject_otel_context_into_structlog(logger, method, event_dict)  # type: ignore[return-value]
+    return inject_otel_context_into_structlog(logger, method, event_dict)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ and that important edge states are explicitly surfaced.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -66,7 +67,7 @@ def _signal_result(signals: list[SignalOutput] | None = None, success: bool = Tr
 
 
 @pytest.fixture(autouse=True)
-def _clean_stores() -> None:
+def _clean_stores() -> Generator[None, None, None]:
     clear_explanation_store()
     clear_session_store()
     yield

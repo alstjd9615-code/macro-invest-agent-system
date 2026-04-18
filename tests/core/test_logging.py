@@ -12,18 +12,15 @@ from __future__ import annotations
 import uuid
 
 import pytest
-import structlog.contextvars
 
 from core.logging.logger import (
     bind_request_context,
-    get_logger,
     get_session_id,
     get_trace_id,
     set_session_id,
     set_trace_id,
 )
 from core.logging.timing import timed_operation
-
 
 # ---------------------------------------------------------------------------
 # Trace ID
@@ -143,7 +140,7 @@ class _MockLog:
     """Minimal stand-in logger for timed_operation tests."""
 
     def __init__(self) -> None:
-        self.records: list[dict] = []
+        self.records: list[dict[str, object]] = []
 
     def debug(self, event: str, **kw: object) -> None:
         self.records.append({"level": "debug", "event": event, **kw})
@@ -187,12 +184,12 @@ class TestTimedOperation:
     async def test_exception_is_reraised_unchanged(self) -> None:
         log = _MockLog()
 
-        class _Sentinel(Exception):
+        class _SentinelError(Exception):
             pass
 
-        with pytest.raises(_Sentinel):
+        with pytest.raises(_SentinelError):
             async with timed_operation("layer", "op", log):
-                raise _Sentinel("boom")
+                raise _SentinelError("boom")
 
     @pytest.mark.asyncio
     async def test_exception_emits_operation_failed(self) -> None:

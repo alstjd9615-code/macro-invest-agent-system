@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -62,7 +63,7 @@ def _make_signal_result(signals: list[SignalOutput] | None = None) -> SignalResu
 
 
 @pytest.fixture()
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     macro_svc = MagicMock()
     macro_svc.get_snapshot = AsyncMock(return_value=_make_snapshot())
     signal_svc = MagicMock()
@@ -74,7 +75,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture()
-def client_empty_signals() -> TestClient:
+def client_empty_signals() -> Generator[TestClient, None, None]:
     macro_svc = MagicMock()
     macro_svc.get_snapshot = AsyncMock(return_value=_make_snapshot())
     signal_svc = MagicMock()

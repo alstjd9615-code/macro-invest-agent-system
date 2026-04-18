@@ -25,7 +25,6 @@ from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceTyp
 from domain.macro.models import MacroFeature
 from pipelines.ingestion.macro_ingestion_service import DEFAULT_INDICATORS, MacroIngestionService
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -189,7 +188,6 @@ class TestFredMacroDataSourceFetchRaw:
         assert result == []
 
     async def test_metadata_contains_series_id(self) -> None:
-        src = FredMacroDataSource(api_key="test-key")
         feature = _make_feature(MacroIndicatorType.GDP)
         assert feature.metadata["series_id"] == "GDPC1"
 
@@ -203,16 +201,7 @@ class TestFredMacroDataSourceFailurePaths:
     """Tests for HTTP error and timeout error paths."""
 
     def test_http_error_raises_runtime_error_with_message(self) -> None:
-        import urllib.error
-
         src = FredMacroDataSource(api_key="test-key")
-        http_err = urllib.error.HTTPError(
-            url="http://example.com",
-            code=400,
-            msg="Bad Request",
-            hdrs=None,
-            fp=None,  # type: ignore[arg-type]
-        )
         with patch.object(
             src,
             "_fetch_latest_observation",
@@ -220,9 +209,8 @@ class TestFredMacroDataSourceFailurePaths:
                 "FRED API HTTP error 400 for series='GDPC1': Bad Request. "
                 "Verify your FRED_API_KEY and network access."
             ),
-        ):
-            with pytest.raises(RuntimeError, match="FRED API HTTP error 400"):
-                src._fetch_latest_observation("GDPC1")
+        ), pytest.raises(RuntimeError, match="FRED API HTTP error 400"):
+            src._fetch_latest_observation("GDPC1")
 
     def test_timeout_raises_runtime_error_with_message(self) -> None:
         src = FredMacroDataSource(api_key="test-key")
@@ -233,34 +221,23 @@ class TestFredMacroDataSourceFailurePaths:
                 "FRED API request timed out after 10.0s for series='GDPC1'. "
                 "Check your network connection or increase fred_request_timeout_s."
             ),
-        ):
-            with pytest.raises(RuntimeError, match="timed out"):
-                src._fetch_latest_observation("GDPC1")
+        ), pytest.raises(RuntimeError, match="timed out"):
+            src._fetch_latest_observation("GDPC1")
 
     def test_http_error_surfaces_through_fetch_raw(self) -> None:
         """RuntimeError from _fetch_latest_observation propagates through fetch_raw."""
-        import urllib.error
-
         src = FredMacroDataSource(api_key="test-key")
-        http_err = urllib.error.HTTPError(
-            url="http://example.com",
-            code=403,
-            msg="Forbidden",
-            hdrs=None,
-            fp=None,  # type: ignore[arg-type]
-        )
 
         with patch.object(
             src,
             "_fetch_latest_observation",
             side_effect=RuntimeError("FRED API HTTP error 403 for series='GDPC1': Forbidden."),
-        ):
-            with pytest.raises(RuntimeError, match="FRED API HTTP error 403"):
-                import asyncio
+        ), pytest.raises(RuntimeError, match="FRED API HTTP error 403"):
+            import asyncio
 
-                asyncio.get_event_loop().run_until_complete(
-                    src.fetch_raw("US", [MacroIndicatorType.GDP.value])
-                )
+            asyncio.get_event_loop().run_until_complete(
+                src.fetch_raw("US", [MacroIndicatorType.GDP.value])
+            )
 
     def test_timeout_surfaces_through_fetch_raw(self) -> None:
         """TimeoutError from _fetch_latest_observation propagates through fetch_raw."""
@@ -270,13 +247,12 @@ class TestFredMacroDataSourceFailurePaths:
             src,
             "_fetch_latest_observation",
             side_effect=RuntimeError("FRED API request timed out after 10.0s"),
-        ):
-            with pytest.raises(RuntimeError, match="timed out"):
-                import asyncio
+        ), pytest.raises(RuntimeError, match="timed out"):
+            import asyncio
 
-                asyncio.get_event_loop().run_until_complete(
-                    src.fetch_raw("US", [MacroIndicatorType.GDP.value])
-                )
+            asyncio.get_event_loop().run_until_complete(
+                src.fetch_raw("US", [MacroIndicatorType.GDP.value])
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +307,7 @@ class TestFredIngestionIntegration:
         store = InMemoryFeatureStore()
         svc = MacroIngestionService(source=src, repository=store)
 
-        with patch.object(src, "fetch_raw", new=AsyncMock(return_value=[])):
-            with pytest.raises(RuntimeError, match="No macro features returned"):
-                await svc.ingest("US")
+        with patch.object(src, "fetch_raw", new=AsyncMock(return_value=[])), pytest.raises(
+            RuntimeError, match="No macro features returned"
+        ):
+            await svc.ingest("US")

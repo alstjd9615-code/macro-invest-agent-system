@@ -92,7 +92,7 @@ class MacroRegime(BaseModel, extra="forbid"):
     rationale_summary: str = Field(default="")
 
     @model_validator(mode="after")
-    def validate_label_family_alignment(self) -> "MacroRegime":
+    def validate_label_family_alignment(self) -> MacroRegime:
         expected_family = regime_family_for_label(self.regime_label)
         if self.regime_family != expected_family:
             msg = (

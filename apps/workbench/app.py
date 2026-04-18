@@ -80,7 +80,7 @@ st.markdown("---")
 def _get(path: str, **params: object) -> dict[str, object] | None:
     """Perform a GET request against the API; return JSON dict or None on error."""
     try:
-        resp = requests.get(f"{API_BASE_URL}{path}", params=params, timeout=10)
+        resp = requests.get(f"{API_BASE_URL}{path}", params=params, timeout=10)  # type: ignore[arg-type]
         resp.raise_for_status()
         return resp.json()  # type: ignore[no-any-return]
     except requests.exceptions.ConnectionError:
