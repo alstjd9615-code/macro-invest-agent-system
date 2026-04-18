@@ -55,7 +55,12 @@ async function getJson(path, options = undefined) {
 
 function renderSnapshot(snapshot) {
   snapshotTrust.textContent = formatTrust(snapshot.trust);
-  snapshotBody.innerHTML = snapshot.features
+  const features = snapshot.features || [];
+  if (features.length === 0) {
+    snapshotBody.innerHTML = '<tr><td colspan="4">No observations available</td></tr>';
+    return;
+  }
+  snapshotBody.innerHTML = features
     .map(
       (feature) => `
       <tr>
@@ -71,7 +76,12 @@ function renderSnapshot(snapshot) {
 
 function renderCompare(compare) {
   compareTrust.textContent = formatTrust(compare.trust);
-  compareBody.innerHTML = compare.deltas
+  const deltas = compare.deltas || [];
+  if (deltas.length === 0) {
+    compareBody.innerHTML = '<tr><td colspan="5">No comparison data available</td></tr>';
+    return;
+  }
+  compareBody.innerHTML = deltas
     .map(
       (delta) => `
       <tr>
@@ -203,17 +213,20 @@ async function loadExplanation() {
 }
 
 async function loadAll() {
-  try {
-    await loadSnapshot();
-    await loadCompare();
-    await loadRegimeLatest();
-    await loadRegimeCompare();
-    await loadSignals();
-    await loadExplanation();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    snapshotTrust.textContent = `Load error: ${message}`;
-  }
+  await Promise.allSettled([
+    loadSnapshot().then(() => loadCompare()).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      snapshotTrust.textContent = `Load error: ${message}`;
+      compareTrust.textContent = "Skipped — snapshot unavailable";
+    }),
+    loadRegimeLatest(),
+    loadRegimeCompare(),
+    loadSignals().then(() => loadExplanation()).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      signalsTrust.textContent = `Load error: ${message}`;
+      explanationTrust.textContent = "Skipped — signals unavailable";
+    }),
+  ]);
 }
 
 document.getElementById("refresh-snapshot").addEventListener("click", () => {
@@ -236,5 +249,13 @@ document.getElementById("refresh-regime").addEventListener("click", async () => 
 document.getElementById("refresh-regime-compare").addEventListener("click", async () => {
   await loadRegimeCompare();
 });
+
+// Set initial loading states so sections never look silently blank
+snapshotTrust.textContent = "Loading…";
+compareTrust.textContent = "Loading…";
+regimeLatestStatus.textContent = "Loading…";
+regimeCompareStatus.textContent = "Loading…";
+signalsTrust.textContent = "Loading…";
+explanationTrust.textContent = "Loading…";
 
 loadAll();
