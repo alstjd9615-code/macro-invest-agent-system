@@ -9,12 +9,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-tests:
-    name: Backend install + tests
+  # ---------------------------------------------------------------------------
+  # Lint — ruff format + style checks
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -22,57 +27,108 @@ jobs:
           python-version: "3.12"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
 
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run backend tests
-        run: uv run pytest tests -q
+      - name: Check formatting
+        run: uv run ruff format --check .
 
-  frontend-build:
-    name: Frontend install + production build
+      - name: Check linting
+        run: uv run ruff check .
+
+  # ---------------------------------------------------------------------------
+  # Type check — mypy strict analysis
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: Type check (mypy)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
         with:
-          node-version: "20"
+          python-version: "3.12"
 
-      - name: Install frontend dependencies
-        shell: bash
-        run: |
-          if [ -f frontend/package.json ]; then
-            cd frontend
-            npm ci
-          else
-            echo "Static frontend detected: no package.json, no npm dependencies to install."
-          fi
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Run frontend production build
-        shell: bash
-        run: |
-          if [ -f frontend/package.json ]; then
-            cd frontend
-            npm run build
-          else
-            echo "Static frontend detected: verifying production artifact build via Docker image build."
-            docker build -f frontend/Dockerfile -t macro-frontend-ci:latest .
-          fi
+      - name: Install dependencies
+        run: uv sync --all-extras
 
-  docker-smoke:
-    name: Docker build smoke check (optional)
+      - name: Run mypy
+        run: uv run mypy .
+
+  # ---------------------------------------------------------------------------
+  # Tests — pytest with coverage report
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests (pytest + coverage)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run tests with coverage
+        run: uv run pytest tests -q --cov=. --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Docker build smoke check
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Docker build smoke check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build API image
-        run: docker build -f apps/api/Dockerfile -t macro-api-ci:latest .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          tags: macro-api-ci:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build frontend image
-        run: docker build -f frontend/Dockerfile -t macro-frontend-ci-smoke:latest .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: macro-frontend-ci:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
