@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,7 +15,7 @@ from apps.api.routers.explanations import (
 
 
 @pytest.fixture(autouse=True)
-def _clear_store() -> None:
+def _clear_store() -> Generator[None, None, None]:
     """Ensure the explanation store is clean before and after each test."""
     clear_explanation_store()
     yield

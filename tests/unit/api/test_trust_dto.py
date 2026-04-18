@@ -104,15 +104,15 @@ class TestTrustMetadata:
         assert trust.changed_indicators_count is None
 
     def test_freshness_status_enum_values(self) -> None:
-        assert FreshnessStatus.FRESH == "fresh"
-        assert FreshnessStatus.STALE == "stale"
-        assert FreshnessStatus.UNKNOWN == "unknown"
+        assert FreshnessStatus.FRESH.value == "fresh"
+        assert FreshnessStatus.STALE.value == "stale"
+        assert FreshnessStatus.UNKNOWN.value == "unknown"
 
     def test_data_availability_enum_values(self) -> None:
-        assert DataAvailability.FULL == "full"
-        assert DataAvailability.PARTIAL == "partial"
-        assert DataAvailability.DEGRADED == "degraded"
-        assert DataAvailability.UNAVAILABLE == "unavailable"
+        assert DataAvailability.FULL.value == "full"
+        assert DataAvailability.PARTIAL.value == "partial"
+        assert DataAvailability.DEGRADED.value == "degraded"
+        assert DataAvailability.UNAVAILABLE.value == "unavailable"
 
 
 # ---------------------------------------------------------------------------

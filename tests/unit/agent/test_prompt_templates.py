@@ -223,7 +223,7 @@ class TestRenderSignalReviewSummary:
             "engine_run_id": "r",
             "execution_time_ms": "1.0",
         }
-        assert render_signal_review_summary(**kwargs) == render_signal_review_summary(**kwargs)
+        assert render_signal_review_summary(**kwargs) == render_signal_review_summary(**kwargs)  # type: ignore[arg-type]
 
     def test_no_leftover_placeholders(self) -> None:
         result = render_signal_review_summary(
@@ -281,7 +281,7 @@ class TestRenderSnapshotSummary:
             "features_count": 5,
             "snapshot_timestamp": "2026-01-01T00:00:00Z",
         }
-        assert render_snapshot_summary(**kwargs) == render_snapshot_summary(**kwargs)
+        assert render_snapshot_summary(**kwargs) == render_snapshot_summary(**kwargs)  # type: ignore[arg-type]
 
     def test_no_leftover_placeholders(self) -> None:
         result = render_snapshot_summary(

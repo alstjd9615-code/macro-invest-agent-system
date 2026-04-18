@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from core.contracts.macro_snapshot_repository import MacroSnapshotRepositoryContract
-from domain.macro.enums import MacroIndicatorType
 from domain.macro.snapshot import (
     MacroSnapshotState,
     compare_snapshot_states,

@@ -17,6 +17,7 @@ Design notes
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 
 
 class FeatureStoreRepositoryContract(ABC):
@@ -54,7 +55,7 @@ class FeatureStoreRepositoryContract(ABC):
         """
 
     @abstractmethod
-    async def list_snapshots(self, country: str, limit: int = 10) -> list[object]:
+    async def list_snapshots(self, country: str, limit: int = 10) -> Sequence[object]:
         """List the most recently stored snapshots for a country.
 
         Args:

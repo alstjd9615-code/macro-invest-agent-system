@@ -9,8 +9,8 @@ from domain.macro.comparison import (
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
 from domain.macro.regime import (
-    MacroRegime,
     REGIME_LABEL_FAMILY_MAP,
+    MacroRegime,
     RegimeConfidence,
     RegimeFamily,
     RegimeLabel,

@@ -8,8 +8,8 @@ import pytest
 from pydantic import ValidationError
 
 from domain.macro.regime import (
-    MacroRegime,
     REGIME_LABEL_FAMILY_MAP,
+    MacroRegime,
     RegimeConfidence,
     RegimeFamily,
     RegimeLabel,

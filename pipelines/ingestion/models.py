@@ -103,7 +103,7 @@ class FreshnessMetadata(BaseModel, extra="forbid"):
     is_stale: bool = Field(default=False)
 
     @model_validator(mode="after")
-    def validate_flags(self) -> "FreshnessMetadata":
+    def validate_flags(self) -> FreshnessMetadata:
         if self.status == FreshnessStatus.LATE and not self.is_late:
             raise ValueError("is_late must be true when status is 'late'")
         if self.status == FreshnessStatus.STALE and not self.is_stale:
@@ -141,7 +141,7 @@ class NormalizedMacroObservation(BaseModel, extra="forbid"):
     metadata: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_temporal_order(self) -> "NormalizedMacroObservation":
+    def validate_temporal_order(self) -> NormalizedMacroObservation:
         if self.observation_date > self.fetched_at:
             raise ValueError("observation_date cannot be later than fetched_at")
         if self.release_date > self.fetched_at:

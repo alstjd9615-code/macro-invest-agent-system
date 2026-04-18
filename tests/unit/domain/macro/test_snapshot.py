@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.snapshot import (
     DegradedStatus,
-    FreshnessStatus,
+    FinancialConditionsState,
     GrowthState,
     InflationState,
     LaborState,
@@ -21,7 +21,11 @@ from domain.macro.snapshot import (
     derive_policy_state,
     select_latest_observations,
 )
-from pipelines.ingestion.models import FreshnessMetadata, NormalizedMacroObservation
+from pipelines.ingestion.models import (
+    FreshnessMetadata,
+    FreshnessStatus,
+    NormalizedMacroObservation,
+)
 
 
 def _obs(
@@ -103,22 +107,22 @@ class TestSnapshotComparison:
             snapshot_id="prev",
             as_of_date=date(2026, 1, 9),
             snapshot_timestamp=now - timedelta(days=1),
-            growth_state="slowing",
-            inflation_state="sticky",
-            labor_state="softening",
-            policy_state="neutral",
-            financial_conditions_state="neutral",
+            growth_state=GrowthState.SLOWING,
+            inflation_state=InflationState.STICKY,
+            labor_state=LaborState.SOFTENING,
+            policy_state=PolicyState.NEUTRAL,
+            financial_conditions_state=FinancialConditionsState.NEUTRAL,
             indicator_values={"pmi": 49.0},
         )
         current = MacroSnapshotState(
             snapshot_id="curr",
             as_of_date=date(2026, 1, 10),
             snapshot_timestamp=now,
-            growth_state="accelerating",
-            inflation_state="sticky",
-            labor_state="softening",
-            policy_state="restrictive",
-            financial_conditions_state="neutral",
+            growth_state=GrowthState.ACCELERATING,
+            inflation_state=InflationState.STICKY,
+            labor_state=LaborState.SOFTENING,
+            policy_state=PolicyState.RESTRICTIVE,
+            financial_conditions_state=FinancialConditionsState.NEUTRAL,
             indicator_values={"pmi": 53.0},
         )
         cmp = compare_snapshot_states(current, previous)

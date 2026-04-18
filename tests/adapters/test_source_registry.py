@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from adapters.sources.fixture_macro_data_source import FixtureMacroDataSource
 from adapters.sources.in_memory_macro_data_source import InMemoryMacroDataSource
 from adapters.sources.source_registry import SourceRegistry

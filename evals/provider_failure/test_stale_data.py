@@ -10,7 +10,7 @@ Verifies:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -43,7 +43,7 @@ class TestStaleDataEval:
         signal_svc = SignalService()
         adapter = MCPAdapter(macro_svc, signal_svc)
         agent_svc = AgentService(macro_svc, signal_svc)
-        agent_svc._adapter = adapter  # type: ignore[attr-defined]
+        agent_svc._adapter = adapter
 
         request = MacroSnapshotSummaryRequest(
             request_id="stale-req-001",

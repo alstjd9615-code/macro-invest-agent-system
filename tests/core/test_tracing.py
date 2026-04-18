@@ -10,10 +10,13 @@ Covers:
 
 from __future__ import annotations
 
+from typing import cast
+
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
 import core.tracing.tracer as tracer_mod
+from core.config.settings import Settings
 from core.tracing import span_attributes
 from core.tracing.tracer import (
     configure_tracing,
@@ -66,16 +69,16 @@ class TestConfigureTracing:
         _reset_tracer_module()
 
     def test_disabled_does_not_raise(self) -> None:
-        configure_tracing(_FakeSettings(tracing_enabled=False))
+        configure_tracing(cast(Settings, _FakeSettings(tracing_enabled=False)))
 
     def test_disabled_marks_configured(self) -> None:
-        configure_tracing(_FakeSettings(tracing_enabled=False))
+        configure_tracing(cast(Settings, _FakeSettings(tracing_enabled=False)))
         assert tracer_mod._configured is True
 
     def test_idempotent_second_call_is_noop(self) -> None:
-        configure_tracing(_FakeSettings(tracing_enabled=False))
+        configure_tracing(cast(Settings, _FakeSettings(tracing_enabled=False)))
         # Second call must not raise even though _configured is True.
-        configure_tracing(_FakeSettings(tracing_enabled=False))
+        configure_tracing(cast(Settings, _FakeSettings(tracing_enabled=False)))
         assert tracer_mod._configured is True
 
     def test_enabled_initialises_sdk_provider(self) -> None:
@@ -86,11 +89,14 @@ class TestConfigureTracing:
         a TracerProvider (not the default ProxyTracerProvider) is installed.
         """
         configure_tracing(
-            _FakeSettings(
-                tracing_enabled=True,
-                otlp_endpoint="http://localhost:4318",
-                otel_service_name="test-svc",
-                otel_sample_rate=1.0,
+            cast(
+                Settings,
+                _FakeSettings(
+                    tracing_enabled=True,
+                    otlp_endpoint="http://localhost:4318",
+                    otel_service_name="test-svc",
+                    otel_sample_rate=1.0,
+                ),
             )
         )
         provider = trace.get_tracer_provider()
@@ -131,7 +137,7 @@ class TestInjectOtelContextIntoStructlog:
 
     def test_no_active_span_leaves_event_dict_unchanged(self) -> None:
         # With only the no-op provider, no valid span is active.
-        event = {"event": "something"}
+        event: dict[str, object] = {"event": "something"}
         result = inject_otel_context_into_structlog(None, "info", event)
         assert "otel_trace_id" not in result
         assert "otel_span_id" not in result

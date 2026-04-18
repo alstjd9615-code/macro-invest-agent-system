@@ -8,12 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from apps.api.dependencies import get_regime_service
 from apps.api.dto.regimes import RegimeCompareResponse, RegimeLatestResponse, RegimeTransitionDTO
+from domain.macro.regime import MacroRegime
 from services.interfaces import RegimeServiceInterface
 
 router = APIRouter(prefix="/api/regimes", tags=["regimes"])
 
 
-def _to_latest_response(regime) -> RegimeLatestResponse:
+def _to_latest_response(regime: MacroRegime) -> RegimeLatestResponse:
     return RegimeLatestResponse(
         as_of_date=regime.as_of_date,
         regime_id=regime.regime_id,

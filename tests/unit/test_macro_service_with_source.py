@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -124,5 +123,5 @@ class TestMacroServiceWithSource:
         """MacroService correctly identifies the source in its internal state."""
         stub = _StubSource([_make_feature(MacroIndicatorType.GDP)])
         svc = MacroService(source=stub)
-        assert svc._source is not None  # type: ignore[attr-defined]
-        assert svc._source.source_id == "stub"  # type: ignore[attr-defined]
+        assert svc._source is not None
+        assert svc._source.source_id == "stub"

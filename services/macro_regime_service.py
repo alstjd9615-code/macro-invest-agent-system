@@ -14,9 +14,10 @@ from domain.macro.regime_mapping import (
     map_snapshot_to_regime,
 )
 from domain.macro.regime_transition import derive_regime_transition
+from services.interfaces import RegimeServiceInterface
 
 
-class MacroRegimeService:
+class MacroRegimeService(RegimeServiceInterface):
     """Build deterministic macro regimes for a selected as-of date."""
 
     def __init__(
