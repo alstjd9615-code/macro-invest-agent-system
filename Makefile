@@ -56,5 +56,8 @@ build: ## Rebuild images and start all services (use after code changes)
 down: ## Stop local infrastructure
 	docker compose down
 
+build: ## Rebuild images and restart services
+	docker compose up -d --build
+
 logs: ## Tail docker compose logs (Ctrl-C to stop)
 	docker compose logs -f
