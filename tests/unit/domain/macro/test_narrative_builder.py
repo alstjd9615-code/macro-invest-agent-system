@@ -63,6 +63,8 @@ class TestBuildRegimeNarrative:
         narrative = build_regime_narrative(_regime())
         assert "summary" in narrative
         assert "rationale_points" in narrative
+        assert "caveats" in narrative
+        assert "data_quality_notes" in narrative
         assert "regime_label" in narrative
         assert "regime_context" in narrative
         assert "generated_at" in narrative
@@ -86,8 +88,9 @@ class TestBuildRegimeNarrative:
         narrative = build_regime_narrative(_regime())
         ctx = narrative["regime_context"]
         assert isinstance(ctx, dict)
-        for key in ("regime_id", "regime_label", "regime_family", "confidence"):
-            assert key in ctx
+        # Minimum documented keys
+        for key in ("label", "family", "confidence", "transition", "freshness", "degraded_status"):
+            assert key in ctx, f"Missing minimum regime_context key: {key}"
 
     def test_goldilocks_summary_mentions_risk_on(self) -> None:
         narrative = build_regime_narrative(_regime(label=RegimeLabel.GOLDILOCKS))
@@ -125,9 +128,10 @@ class TestBuildRegimeNarrative:
         narrative = build_regime_narrative(
             _regime(missing_inputs=["pmi", "retail_sales"])
         )
-        points_text = " ".join(str(p) for p in narrative["rationale_points"])
-        assert "pmi" in points_text
-        assert "retail_sales" in points_text
+        # Missing inputs are surfaced in data_quality_notes (not rationale_points)
+        dq_text = " ".join(str(n) for n in narrative["data_quality_notes"])
+        assert "pmi" in dq_text
+        assert "retail_sales" in dq_text
 
     def test_transition_from_prior_in_rationale(self) -> None:
         narrative = build_regime_narrative(
@@ -145,7 +149,64 @@ class TestBuildRegimeNarrative:
         for state_label in ("Growth", "Inflation", "Labour", "Policy", "Financial Conditions"):
             assert state_label in points_text
 
-    def test_all_regime_labels_produce_non_empty_summary(self) -> None:
+    def test_caveats_is_list(self) -> None:
+        narrative = build_regime_narrative(_regime())
+        assert isinstance(narrative["caveats"], list)
+
+    def test_data_quality_notes_is_list(self) -> None:
+        narrative = build_regime_narrative(_regime())
+        assert isinstance(narrative["data_quality_notes"], list)
+
+    def test_initial_transition_adds_caveat(self) -> None:
+        narrative = build_regime_narrative(_regime(transition_type=RegimeTransitionType.INITIAL))
+        caveats_text = " ".join(str(c) for c in narrative["caveats"])
+        assert "prior" in caveats_text.lower() or "baseline" in caveats_text.lower()
+
+    def test_low_confidence_adds_caveat(self) -> None:
+        narrative = build_regime_narrative(_regime(confidence=RegimeConfidence.LOW))
+        caveats_text = " ".join(str(c) for c in narrative["caveats"])
+        assert "low confidence" in caveats_text.lower() or "low" in caveats_text.lower()
+
+    def test_stale_data_adds_data_quality_note(self) -> None:
+        narrative = build_regime_narrative(
+            _regime(freshness=FreshnessStatus.STALE, label=RegimeLabel.SLOWDOWN)
+        )
+        dq_text = " ".join(str(n) for n in narrative["data_quality_notes"])
+        assert "stale" in dq_text.lower()
+
+    def test_seeded_regime_adds_data_quality_note(self) -> None:
+        from datetime import UTC, date, datetime
+        from domain.macro.regime import (
+            REGIME_LABEL_FAMILY_MAP,
+            MacroRegime,
+            RegimeTransition,
+        )
+        regime = MacroRegime(
+            as_of_date=date(2026, 4, 1),
+            regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
+            regime_label=RegimeLabel.SLOWDOWN,
+            regime_family=REGIME_LABEL_FAMILY_MAP[RegimeLabel.SLOWDOWN],
+            supporting_snapshot_id="snap-seed",
+            confidence=RegimeConfidence.HIGH,
+            freshness_status=FreshnessStatus.FRESH,
+            degraded_status=DegradedStatus.NONE,
+            transition=RegimeTransition(transition_type=RegimeTransitionType.INITIAL),
+            metadata={"seeded": "true", "source": "synthetic_seed"},
+        )
+        narrative = build_regime_narrative(regime)
+        dq_text = " ".join(str(n) for n in narrative["data_quality_notes"])
+        assert "bootstrap" in dq_text.lower() or "synthetic" in dq_text.lower()
+
+    def test_missing_inputs_adds_both_caveat_and_data_quality_note(self) -> None:
+        narrative = build_regime_narrative(
+            _regime(missing_inputs=["pmi", "retail_sales"])
+        )
+        caveats_text = " ".join(str(c) for c in narrative["caveats"])
+        dq_text = " ".join(str(n) for n in narrative["data_quality_notes"])
+        assert "missing" in caveats_text.lower() or "partial" in caveats_text.lower()
+        assert "pmi" in dq_text.lower()
+
+    def test_all_all_regime_labels_produce_non_empty_summary(self) -> None:
         """Every RegimeLabel must produce a non-empty summary narrative."""
         for label in RegimeLabel:
             narrative = build_regime_narrative(_regime(label=label))

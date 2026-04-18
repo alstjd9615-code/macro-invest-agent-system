@@ -28,30 +28,55 @@ class ExplanationResponse(BaseModel, extra="forbid"):
     """Response for GET /api/explanations/{id} and GET /api/explanations/regime/latest.
 
     Attributes:
-        explanation_id: Unique explanation identifier (typically the run ID
-            or a composite of run ID + signal ID).
-        run_id: Signal engine run this explanation is associated with.
-        signal_id: Signal this explanation describes; ``None`` for snapshot-level
-            or regime-level explanations.
-        summary: Short, human-readable explanation of the signal or snapshot
-            state.
-        rationale_points: Ordered list of supporting rationale bullet points.
+        explanation_id: Unique explanation identifier.
+        run_id: Signal engine run or regime ID this explanation is associated with.
+        signal_id: Signal this explanation describes; ``None`` for regime-level explanations.
+        summary: Concise analyst-facing interpretation paragraph.
+        rationale_points: Ordered supporting bullet points (regime states, confidence, etc.).
+        caveats: Caveats about interpretation limits (e.g. "single-indicator regime",
+            "no prior baseline available for transition comparison").
+        data_quality_notes: Data quality warnings surfaced to analysts (e.g. stale data,
+            missing indicators, degraded snapshot).
         regime_label: Regime label this explanation is grounded in, if available.
         regime_context: Key/value regime metadata for UI rendering.
+
+            **Minimum documented keys** (populated when a regime is available):
+
+            * ``label``          — regime label value (e.g. ``"goldilocks"``)
+            * ``family``         — regime family value (e.g. ``"expansion"``)
+            * ``confidence``     — regime confidence (``"high"`` / ``"medium"`` / ``"low"``)
+            * ``transition``     — transition type (``"initial"`` / ``"shift"`` / etc.)
+            * ``freshness``      — freshness status (``"fresh"`` / ``"late"`` / ``"stale"``)
+            * ``degraded_status``— degraded status (``"none"`` / ``"partial"`` / etc.)
+
         generated_at: Timestamp when this explanation was produced.
         trust: Trust and freshness metadata.
     """
 
     explanation_id: str = Field(..., description="Unique explanation identifier")
-    run_id: str = Field(..., description="Signal engine run this explanation is tied to")
+    run_id: str = Field(..., description="Signal engine run or regime ID this explanation is for")
     signal_id: str | None = Field(
         default=None,
-        description="Signal this explanation describes; None for snapshot-level explanations",
+        description="Signal this explanation describes; None for regime-level explanations",
     )
-    summary: str = Field(default="", description="Short human-readable explanation summary")
+    summary: str = Field(default="", description="Concise analyst-facing interpretation paragraph")
     rationale_points: list[str] = Field(
         default_factory=list,
         description="Supporting rationale bullet points in display order",
+    )
+    caveats: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Caveats about interpretation limits "
+            "(e.g. 'no prior baseline', 'single-indicator regime')."
+        ),
+    )
+    data_quality_notes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Data quality warnings for analysts "
+            "(e.g. 'stale data', 'missing indicators', 'degraded snapshot')."
+        ),
     )
     regime_label: str | None = Field(
         default=None,
@@ -59,7 +84,11 @@ class ExplanationResponse(BaseModel, extra="forbid"):
     )
     regime_context: dict[str, str] = Field(
         default_factory=dict,
-        description="Regime metadata for UI rendering (label, family, confidence, etc.)",
+        description=(
+            "Regime metadata for UI rendering. "
+            "Minimum keys when available: label, family, confidence, transition, "
+            "freshness, degraded_status."
+        ),
     )
     generated_at: datetime = Field(..., description="Timestamp when this explanation was produced")
     trust: TrustMetadata = Field(

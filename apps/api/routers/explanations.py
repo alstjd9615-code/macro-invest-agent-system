@@ -110,6 +110,8 @@ async def get_regime_explanation(
         signal_id=None,
         summary=str(narrative["summary"]),
         rationale_points=[str(p) for p in narrative["rationale_points"]],  # type: ignore[arg-type]
+        caveats=[str(c) for c in narrative["caveats"]],  # type: ignore[arg-type]
+        data_quality_notes=[str(n) for n in narrative["data_quality_notes"]],  # type: ignore[arg-type]
         regime_label=str(narrative["regime_label"]),
         regime_context={k: str(v) for k, v in narrative["regime_context"].items()},  # type: ignore[union-attr]
         generated_at=datetime.now(UTC),

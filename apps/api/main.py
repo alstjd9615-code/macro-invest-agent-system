@@ -37,7 +37,7 @@ from apps.api.routers import regimes as regimes_router
 from apps.api.routers import sessions as sessions_router
 from apps.api.routers import signals as signals_router
 from apps.api.routers import snapshots as snapshots_router
-from apps.api.startup_seeder import seed_regime_from_synthetic_observations
+from apps.api.startup_seeder import SeedStatus, seed_regime_from_synthetic_observations
 from core.config.settings import get_settings
 from core.logging.logger import get_logger
 from core.tracing.tracer import configure_tracing
@@ -45,6 +45,12 @@ from services.macro_snapshot_service import MacroSnapshotService
 
 _log = get_logger(__name__)
 _settings = get_settings()
+
+# ---------------------------------------------------------------------------
+# Application-level mutable state (set once during lifespan startup)
+# ---------------------------------------------------------------------------
+
+_seed_status: SeedStatus | None = None
 
 # ---------------------------------------------------------------------------
 # Lifespan: seed in-memory stores on startup
@@ -59,18 +65,29 @@ async def _lifespan(application: FastAPI) -> AsyncIterator[None]:  # noqa: ARG00
     seeds them with a synthetic macro snapshot and a derived regime so
     that ``GET /api/regimes/latest`` returns a real response from the
     first request onwards.
+
+    Failure contract
+    ----------------
+    If seeding fails the application continues running but ``_seed_status``
+    records the failure.  ``GET /readiness`` surfaces this as a warning
+    so operators can observe the degraded bootstrap state.
     """
+    global _seed_status  # noqa: PLW0603
     snapshot_store = _snapshot_store_singleton()
     regime_service = _regime_service_singleton()
     snapshot_service = MacroSnapshotService(repository=snapshot_store)
-    try:
-        await seed_regime_from_synthetic_observations(
-            snapshot_service=snapshot_service,
-            regime_service=regime_service,
-        )
-        _log.info("startup_seeder_complete")
-    except Exception:  # noqa: BLE001
-        _log.warning("startup_seeder_failed", exc_info=True)
+    status = await seed_regime_from_synthetic_observations(
+        snapshot_service=snapshot_service,
+        regime_service=regime_service,
+    )
+    _seed_status = status
+    if status.success:
+        if status.skipped:
+            _log.info("startup_seeder_skipped_already_populated")
+        else:
+            _log.info("startup_seeder_complete", regime_id=status.regime_id)
+    else:
+        _log.warning("startup_seeder_failed", error=status.error)
     yield
 
 
@@ -124,11 +141,19 @@ async def health() -> dict[str, str]:
 async def readiness() -> dict[str, str]:
     """Return readiness status, confirming configuration is valid.
 
-    Kubernetes readiness probes should call this endpoint.  Currently performs
-    a lightweight config sanity check.  Extend this to include database or
-    feature-store ping when those dependencies are required at startup.
+    Includes bootstrap seeder status so operators can observe whether the
+    startup seeder succeeded, was skipped (store already populated), or
+    failed (degraded state — regime data may be unavailable).
     """
-    return {"status": "ready", "env": _settings.app_env.value}
+    seed_state = "not_run"
+    if _seed_status is not None:
+        if _seed_status.skipped:
+            seed_state = "skipped_already_populated"
+        elif _seed_status.success:
+            seed_state = "ok"
+        else:
+            seed_state = f"degraded:{_seed_status.error or 'unknown'}"
+    return {"status": "ready", "env": _settings.app_env.value, "seed_status": seed_state}
 
 
 @app.get("/metrics", tags=["ops"], summary="Prometheus metrics scrape endpoint")

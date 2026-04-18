@@ -80,17 +80,36 @@ async def get_latest_signals(
         trust = build_trust_from_signal_result(result)
 
         for signal in result.signals:
+            signal_rationale_points = [
+                f"Regime: {regime.regime_label.value} ({regime.regime_family.value})",
+                f"Confidence: {regime.confidence.value}",
+                f"Asset class: {signal.asset_class or 'all'}",
+                f"Signal direction: {signal.signal_type}",
+                f"Strength: {signal.strength}",
+                f"Score: {signal.score:.2f}",
+            ]
+            if signal.supporting_drivers:
+                signal_rationale_points.append(
+                    f"Supporting drivers: {', '.join(signal.supporting_drivers)}"
+                )
+            if signal.conflicting_drivers:
+                signal_rationale_points.append(
+                    f"Conflicting drivers: {', '.join(signal.conflicting_drivers)}"
+                )
             build_and_register_explanation(
                 run_id=result.run_id,
                 signal_id=signal.signal_id,
                 summary=signal.rationale or f"Signal {signal.signal_id} evaluated successfully.",
-                rationale_points=[
-                    f"Regime: {regime.regime_label.value} ({regime.regime_family.value})",
-                    f"Confidence: {regime.confidence.value}",
-                    f"Signal type: {signal.signal_type}",
-                    f"Strength: {signal.strength}",
-                    f"Score: {signal.score:.3f}",
-                ],
+                rationale_points=signal_rationale_points,
+                regime_label=regime.regime_label.value,
+                regime_context={
+                    "label": regime.regime_label.value,
+                    "family": regime.regime_family.value,
+                    "confidence": regime.confidence.value,
+                    "transition": regime.transition.transition_type.value,
+                    "freshness": regime.freshness_status.value,
+                    "degraded_status": regime.degraded_status.value,
+                },
             )
 
         strongest = result.strongest_signal()
@@ -169,7 +188,11 @@ async def get_latest_signals(
     signals_dtos = [signal_output_to_dto(s) for s in result.signals]
     trust = build_trust_from_signal_result(result)
     # Mark as degraded since we're running without a persisted regime
-    trust = trust.model_copy(update={"is_degraded": True})
+    trust = trust.model_copy(update={
+        "is_degraded": True,
+        "availability": DataAvailability.DEGRADED,
+        "degraded_reason": "regime_unavailable_fallback_engine_used",
+    })
 
     if result.signals:
         for signal in result.signals:

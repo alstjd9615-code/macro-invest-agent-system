@@ -176,4 +176,8 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
         rule_results=signal.rule_results,
         rules_passed=rules_passed,
         rules_total=rules_total,
+        asset_class=signal.asset_class,
+        supporting_regime=signal.supporting_regime,
+        supporting_drivers=list(signal.supporting_drivers),
+        conflicting_drivers=list(signal.conflicting_drivers),
     )

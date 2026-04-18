@@ -265,8 +265,8 @@ class TestDegradedState:
             resp = tc.get("/api/signals/latest", params={"country": "US"})
             assert resp.status_code == 200
             trust = resp.json()["trust"]
-            # run_id is empty → our builder sees success=False
-            assert trust["availability"] in ("unavailable", "partial")
+            # run_id is empty → our builder sees success=False or regime unavailable
+            assert trust["availability"] in ("unavailable", "partial", "degraded")
         finally:
             app.dependency_overrides.clear()
 

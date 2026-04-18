@@ -19,31 +19,31 @@ class TestRegimeSignalMap:
     def test_goldilocks_has_buy_equities(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.GOLDILOCKS)
         equity_buys = [
-            r for r in rules if r.asset_class == "equities" and r.signal_type == SignalType.BUY
+            r for r in rules if r.asset_class == "equities" and r.signal_direction == SignalType.BUY
         ]
         assert len(equity_buys) >= 1
 
     def test_contraction_has_sell_equities_very_strong(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.CONTRACTION)
         sell_equities = [
-            r for r in rules if r.asset_class == "equities" and r.signal_type == SignalType.SELL
+            r for r in rules if r.asset_class == "equities" and r.signal_direction == SignalType.SELL
         ]
         assert len(sell_equities) >= 1
-        assert sell_equities[0].strength == SignalStrength.VERY_STRONG
+        assert sell_equities[0].signal_strength == SignalStrength.VERY_STRONG
 
     def test_stagflation_has_sell_equities(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.STAGFLATION_RISK)
-        sells = [r for r in rules if r.signal_type == SignalType.SELL]
+        sells = [r for r in rules if r.signal_direction == SignalType.SELL]
         assert len(sells) >= 1
 
     def test_unclear_has_neutral_signal(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.UNCLEAR)
-        neutral = [r for r in rules if r.signal_type == SignalType.NEUTRAL]
+        neutral = [r for r in rules if r.signal_direction == SignalType.NEUTRAL]
         assert len(neutral) >= 1
 
     def test_mixed_has_hold_signal(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.MIXED)
-        holds = [r for r in rules if r.signal_type == SignalType.HOLD]
+        holds = [r for r in rules if r.signal_direction == SignalType.HOLD]
         assert len(holds) >= 1
 
     def test_all_rules_have_non_empty_rationale(self) -> None:
@@ -60,21 +60,21 @@ class TestRegimeSignalMap:
     def test_disinflation_bonds_buy(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.DISINFLATION)
         bond_buys = [
-            r for r in rules if r.asset_class == "bonds" and r.signal_type == SignalType.BUY
+            r for r in rules if r.asset_class == "bonds" and r.signal_direction == SignalType.BUY
         ]
         assert len(bond_buys) >= 1
 
     def test_policy_tightening_drag_bonds_sell(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.POLICY_TIGHTENING_DRAG)
         bond_sells = [
-            r for r in rules if r.asset_class == "bonds" and r.signal_type == SignalType.SELL
+            r for r in rules if r.asset_class == "bonds" and r.signal_direction == SignalType.SELL
         ]
         assert len(bond_sells) >= 1
 
     def test_reflation_commodities_buy(self) -> None:
         rules = get_regime_signal_rules(RegimeLabel.REFLATION)
         commodity_buys = [
-            r for r in rules if r.asset_class == "commodities" and r.signal_type == SignalType.BUY
+            r for r in rules if r.asset_class == "commodities" and r.signal_direction == SignalType.BUY
         ]
         assert len(commodity_buys) >= 1
 

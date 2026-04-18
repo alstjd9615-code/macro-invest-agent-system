@@ -125,11 +125,15 @@ def build_regime_narrative(regime: MacroRegime) -> dict[str, object]:
 
     Returns a dict with the following keys:
 
-    * ``summary`` — a concise multi-sentence interpretation of the regime.
-    * ``rationale_points`` — ordered list of supporting bullet points.
-    * ``regime_label`` — the string value of the regime label.
-    * ``regime_context`` — dict of contextual metadata for UI rendering.
-    * ``generated_at`` — ISO 8601 UTC timestamp when this narrative was built.
+    * ``summary``              — multi-sentence interpretation paragraph.
+    * ``rationale_points``     — supporting bullet points (states, confidence, transition).
+    * ``caveats``              — interpretation limit warnings.
+    * ``data_quality_notes``   — data quality warnings surfaced to analysts.
+    * ``regime_label``         — string value of the regime label.
+    * ``regime_context``       — dict of contextual metadata for UI rendering.
+      Minimum keys: ``label``, ``family``, ``confidence``, ``transition``,
+      ``freshness``, ``degraded_status``.
+    * ``generated_at``         — ISO 8601 UTC timestamp.
 
     Args:
         regime: The :class:`~domain.macro.regime.MacroRegime` to narrate.
@@ -161,30 +165,18 @@ def build_regime_narrative(regime: MacroRegime) -> dict[str, object]:
 
     summary = " ".join(summary_lines)
 
+    # -----------------------------------------------------------------------
     # Rationale bullet points
+    # -----------------------------------------------------------------------
     rationale_points: list[str] = []
-
-    # Regime identification
     rationale_points.append(
         f"Regime: {regime.regime_label.value} (family: {regime.regime_family.value})"
     )
     rationale_points.append(f"As of date: {regime.as_of_date.isoformat()}")
-
-    # Supporting states
     for state_key, state_label in _STATE_LABELS.items():
         state_value = regime.supporting_states.get(state_key, "unknown")
         rationale_points.append(f"{state_label}: {state_value}")
-
-    # Confidence and data quality
     rationale_points.append(f"Confidence: {regime.confidence.value}")
-    if regime.freshness_status != FreshnessStatus.FRESH:
-        rationale_points.append(f"Freshness: {regime.freshness_status.value}")
-    if regime.degraded_status not in {DegradedStatus.NONE, DegradedStatus.UNKNOWN}:
-        rationale_points.append(f"Data quality: {regime.degraded_status.value}")
-    if regime.missing_inputs:
-        rationale_points.append(f"Missing inputs: {', '.join(regime.missing_inputs)}")
-
-    # Transition
     if regime.transition.transition_from_prior is not None:
         rationale_points.append(
             f"Transition from prior: {regime.transition.transition_from_prior} "
@@ -193,22 +185,78 @@ def build_regime_narrative(regime: MacroRegime) -> dict[str, object]:
     else:
         rationale_points.append(f"Transition: {regime.transition.transition_type.value}")
 
-    # Regime context for UI
+    # -----------------------------------------------------------------------
+    # Caveats (interpretation limit warnings)
+    # -----------------------------------------------------------------------
+    caveats: list[str] = []
+    if regime.transition.transition_type.value == "initial":
+        caveats.append(
+            "No prior regime baseline available — transition analysis cannot be performed."
+        )
+    if regime.confidence == RegimeConfidence.LOW:
+        caveats.append(
+            "Low confidence classification — treat this regime as indicative only. "
+            "Do not base high-conviction trades on this signal alone."
+        )
+    if regime.regime_label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
+        caveats.append(
+            "This is a non-directional regime (mixed/unclear) — no asset-level signals "
+            "can be derived with meaningful confidence."
+        )
+    if regime.missing_inputs:
+        caveats.append(
+            f"Regime derived from partial data ({len(regime.missing_inputs)} missing indicators). "
+            "Classification accuracy may be lower than usual."
+        )
+
+    # -----------------------------------------------------------------------
+    # Data quality notes
+    # -----------------------------------------------------------------------
+    data_quality_notes: list[str] = []
+    if regime.freshness_status != FreshnessStatus.FRESH:
+        data_quality_notes.append(
+            f"Data freshness: {regime.freshness_status.value}. "
+            + (_FRESHNESS_NOTE.get(regime.freshness_status, ""))
+        )
+    if regime.degraded_status not in {DegradedStatus.NONE, DegradedStatus.UNKNOWN}:
+        data_quality_notes.append(
+            f"Snapshot quality: {regime.degraded_status.value}. "
+            + _DEGRADED_NOTE.get(regime.degraded_status, "")
+        )
+    if regime.missing_inputs:
+        data_quality_notes.append(
+            f"Missing inputs: {', '.join(regime.missing_inputs)}. "
+            "These indicators were not available when the regime was classified."
+        )
+    if regime.metadata.get("seeded") == "true":
+        data_quality_notes.append(
+            "Bootstrap data: this regime was generated from synthetic seed data by the "
+            "startup seeder. It does not reflect a real ingestion pipeline run."
+        )
+
+    # -----------------------------------------------------------------------
+    # Regime context for UI (minimum documented keys)
+    # -----------------------------------------------------------------------
     regime_context: dict[str, str] = {
         "regime_id": regime.regime_id,
-        "regime_label": regime.regime_label.value,
-        "regime_family": regime.regime_family.value,
+        "label": regime.regime_label.value,
+        "family": regime.regime_family.value,
         "confidence": regime.confidence.value,
-        "freshness_status": regime.freshness_status.value,
+        "transition": regime.transition.transition_type.value,
+        "freshness": regime.freshness_status.value,
         "degraded_status": regime.degraded_status.value,
+        # Extended keys for additional UI use
         "supporting_snapshot_id": regime.supporting_snapshot_id,
-        "transition_type": regime.transition.transition_type.value,
         "transition_from_prior": regime.transition.transition_from_prior or "",
+        "is_seeded": regime.metadata.get("seeded", "false"),
+        "data_source": regime.metadata.get("source", ""),
     }
 
     return {
         "summary": summary,
         "rationale_points": rationale_points,
+        "caveats": caveats,
+        "data_quality_notes": data_quality_notes,
         "regime_label": regime.regime_label.value,
         "regime_context": regime_context,
         "generated_at": datetime.now(UTC).isoformat(),

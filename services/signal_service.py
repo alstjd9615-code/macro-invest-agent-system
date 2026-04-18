@@ -99,7 +99,7 @@ class SignalService(SignalServiceInterface):
 
         Derives investment signals deterministically from the current macro
         regime label.  Each signal is grounded in the regime with an
-        analyst-facing rationale.
+        analyst-facing rationale and structured driver lists.
 
         Args:
             regime: The current :class:`~domain.macro.regime.MacroRegime`.
@@ -115,13 +115,17 @@ class SignalService(SignalServiceInterface):
         for rule in rules:
             signal_out = SignalOutput(
                 signal_id=rule.signal_id,
-                signal_type=rule.signal_type,
-                strength=rule.strength,
-                score=_strength_to_score(rule.strength),
+                signal_type=rule.signal_direction,
+                strength=rule.signal_strength,
+                score=rule.signal_confidence,
                 triggered_at=now,
                 trend=rule.trend,
                 rationale=rule.regime_rationale,
                 rule_results={"regime_rule": True},
+                asset_class=rule.asset_class,
+                supporting_regime=rule.supporting_regime,
+                supporting_drivers=list(rule.supporting_drivers),
+                conflicting_drivers=list(rule.conflicting_drivers),
             )
             signals.append(signal_out)
 
@@ -130,8 +134,6 @@ class SignalService(SignalServiceInterface):
             regime_label=regime.regime_label.value,
             signals_generated=len(signals),
         )
-        # SignalResult requires a MacroSnapshot; build a minimal placeholder
-        # that carries the regime's as-of date as metadata.
         from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
         from domain.macro.models import MacroFeature, MacroSnapshot
 
@@ -157,17 +159,3 @@ class SignalService(SignalServiceInterface):
             signals=signals,
             success=True,
         )
-
-
-def _strength_to_score(strength: "SignalStrength") -> float:
-    """Map :class:`~domain.signals.enums.SignalStrength` to a numeric score."""
-    from domain.signals.enums import SignalStrength
-
-    _map = {
-        SignalStrength.VERY_WEAK: 0.1,
-        SignalStrength.WEAK: 0.3,
-        SignalStrength.MODERATE: 0.5,
-        SignalStrength.STRONG: 0.75,
-        SignalStrength.VERY_STRONG: 0.95,
-    }
-    return _map.get(strength, 0.5)

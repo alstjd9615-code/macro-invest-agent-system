@@ -8,7 +8,11 @@ import pytest
 
 from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
-from apps.api.startup_seeder import seed_regime_from_synthetic_observations
+from apps.api.startup_seeder import (
+    SEEDER_METADATA,
+    SeedStatus,
+    seed_regime_from_synthetic_observations,
+)
 from domain.macro.regime import RegimeLabel
 from services.macro_regime_service import MacroRegimeService
 from services.macro_snapshot_service import MacroSnapshotService
@@ -49,12 +53,14 @@ async def test_seeder_populates_regime_store(
     """After seeding, the regime store contains exactly one regime."""
     assert regime_store.all_regimes() == []
 
-    await seed_regime_from_synthetic_observations(
+    status = await seed_regime_from_synthetic_observations(
         snapshot_service=snapshot_service,
         regime_service=regime_service,
         as_of_date=date(2026, 4, 1),
     )
 
+    assert status.success is True
+    assert status.skipped is False
     regimes = regime_store.all_regimes()
     assert len(regimes) == 1
 
@@ -73,13 +79,60 @@ async def test_seeder_regime_has_known_label(
     )
 
     regime = regime_store.all_regimes()[0]
-    # Synthetic values should produce a deterministic non-UNCLEAR regime
     assert regime.regime_label in {
         RegimeLabel.SLOWDOWN,
         RegimeLabel.POLICY_TIGHTENING_DRAG,
         RegimeLabel.STAGFLATION_RISK,
         RegimeLabel.CONTRACTION,
     }
+
+
+@pytest.mark.asyncio
+async def test_seeder_regime_carries_synthetic_metadata(
+    snapshot_service: MacroSnapshotService,
+    regime_service: MacroRegimeService,
+    regime_store: InMemoryMacroRegimeStore,
+) -> None:
+    """Seeded regime must have metadata distinguishing it from production data."""
+    await seed_regime_from_synthetic_observations(
+        snapshot_service=snapshot_service,
+        regime_service=regime_service,
+        as_of_date=date(2026, 4, 1),
+    )
+
+    regime = regime_store.all_regimes()[0]
+    assert regime.metadata.get("seeded") == "true"
+    assert regime.metadata.get("source") == "synthetic_seed"
+    assert regime.metadata.get("seed_version") is not None
+    for key, value in SEEDER_METADATA.items():
+        assert regime.metadata.get(key) == value
+
+
+@pytest.mark.asyncio
+async def test_seeder_is_idempotent(
+    snapshot_service: MacroSnapshotService,
+    regime_service: MacroRegimeService,
+    regime_store: InMemoryMacroRegimeStore,
+) -> None:
+    """Calling the seeder twice does not add a second regime (idempotent)."""
+    target = date(2026, 4, 1)
+
+    status1 = await seed_regime_from_synthetic_observations(
+        snapshot_service=snapshot_service,
+        regime_service=regime_service,
+        as_of_date=target,
+    )
+    assert status1.success is True
+    assert status1.skipped is False
+
+    status2 = await seed_regime_from_synthetic_observations(
+        snapshot_service=snapshot_service,
+        regime_service=regime_service,
+        as_of_date=target,
+    )
+    assert status2.success is True
+    assert status2.skipped is True
+    assert len(regime_store.all_regimes()) == 1
 
 
 @pytest.mark.asyncio
@@ -123,7 +176,7 @@ async def test_seeder_snapshot_is_populated(
     regime_service: MacroRegimeService,
     snapshot_store: InMemoryMacroSnapshotStore,
 ) -> None:
-    """After seeding, the snapshot store contains one snapshot with real state values."""
+    """After seeding, snapshot store contains one snapshot with derived state values."""
     await seed_regime_from_synthetic_observations(
         snapshot_service=snapshot_service,
         regime_service=regime_service,
@@ -133,9 +186,26 @@ async def test_seeder_snapshot_is_populated(
     snapshots = snapshot_store.all_snapshots()
     assert len(snapshots) == 1
     snap = snapshots[0]
-    # All five category states should be derived (not UNKNOWN)
     assert snap.growth_state.value != "unknown"
     assert snap.inflation_state.value != "unknown"
     assert snap.labor_state.value != "unknown"
     assert snap.policy_state.value != "unknown"
     assert snap.financial_conditions_state.value != "unknown"
+
+
+@pytest.mark.asyncio
+async def test_seeder_returns_success_status(
+    snapshot_service: MacroSnapshotService,
+    regime_service: MacroRegimeService,
+) -> None:
+    """SeedStatus.success is True and regime_id is populated on a fresh store."""
+    status = await seed_regime_from_synthetic_observations(
+        snapshot_service=snapshot_service,
+        regime_service=regime_service,
+        as_of_date=date(2026, 4, 1),
+    )
+
+    assert isinstance(status, SeedStatus)
+    assert status.success is True
+    assert status.error is None
+    assert status.regime_id is not None

@@ -27,6 +27,20 @@ class RegimeLatestResponse(BaseModel, extra="forbid"):
     supporting_states: dict[str, str] = Field(default_factory=dict)
     transition: RegimeTransitionDTO = Field(default_factory=RegimeTransitionDTO)
     rationale_summary: str = Field(default="")
+    is_seeded: bool = Field(
+        default=False,
+        description=(
+            "True when this regime was created by the startup bootstrap seeder "
+            "from synthetic data rather than from a real ingestion pipeline."
+        ),
+    )
+    data_source: str = Field(
+        default="",
+        description=(
+            "Origin of the data used to derive this regime. "
+            "'synthetic_seed' for bootstrap data; empty for production data."
+        ),
+    )
 
 
 class RegimeCompareResponse(BaseModel, extra="forbid"):

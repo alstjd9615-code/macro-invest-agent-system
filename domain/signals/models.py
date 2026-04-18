@@ -82,6 +82,31 @@ class SignalOutput(BaseModel):
         default_factory=dict,
         description="Results of each rule evaluation (rule_name -> passed)",
     )
+    asset_class: str = Field(
+        default="",
+        description=(
+            "Target asset class for this signal (e.g. 'equities', 'bonds', 'commodities'). "
+            "Empty for regime-level or multi-asset signals."
+        ),
+    )
+    supporting_regime: str = Field(
+        default="",
+        description="Regime label that grounds this signal (e.g. 'goldilocks', 'contraction').",
+    )
+    supporting_drivers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Macro factors that support this signal direction "
+            "(e.g. 'growth_accelerating', 'inflation_cooling')."
+        ),
+    )
+    conflicting_drivers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Macro factors that partially contradict or reduce confidence in this signal "
+            "(e.g. 'policy_restrictive', 'labor_weakening')."
+        ),
+    )
 
 
 class SignalResult(BaseModel):

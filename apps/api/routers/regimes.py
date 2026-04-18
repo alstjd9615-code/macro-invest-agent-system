@@ -15,6 +15,8 @@ router = APIRouter(prefix="/api/regimes", tags=["regimes"])
 
 
 def _to_latest_response(regime: MacroRegime) -> RegimeLatestResponse:
+    is_seeded = regime.metadata.get("seeded") == "true"
+    data_source = regime.metadata.get("source", "")
     return RegimeLatestResponse(
         as_of_date=regime.as_of_date,
         regime_id=regime.regime_id,
@@ -33,6 +35,8 @@ def _to_latest_response(regime: MacroRegime) -> RegimeLatestResponse:
             changed=regime.transition.changed,
         ),
         rationale_summary=regime.rationale_summary,
+        is_seeded=is_seeded,
+        data_source=data_source,
     )
 
 
