@@ -85,3 +85,10 @@ line-ending = "lf"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agent", "apps", "core", "domain", "evals", "mcp", "pipelines"]
+
+[tool.coverage.run]
+source = ["agent", "apps", "core", "domain", "pipelines", "services", "adapters"]
+omit = ["tests/*", "evals/*"]
+
+[tool.coverage.report]
+skip_empty = true

@@ -1,51 +1,28 @@
 # Deployment Guide
 
-This document covers how to deploy the `macro-invest-agent-platform` to a
-local development environment or a staging/production-like setup, including
-health checks, smoke validation, and rollback guidance.
+> **Current status:** Local Docker Compose only.
+> Remote deployment is not configured.
+> See [ci_cd.md](ci_cd.md) for the complete local workflow.
+
+This document covers how to deploy the `macro-invest-agent-platform`.
 
 ---
 
 ## Local development
 
-### Start all services
+### Quick start
 
 ```bash
-docker compose up -d
-```
+# 1. Pull latest code
+git pull
 
-This brings up:
-| Service | Port | Purpose |
-|---------|------|---------|
-| PostgreSQL | `5432` | Feature and signal persistence |
-| MinIO | `9000` / `9001` | Raw data artefacts |
-| API | `8000` | Analyst-facing FastAPI read API |
-| Frontend | `8080` | Minimal analyst dashboard |
-| Prometheus | `9090` | Metrics collection |
-| Grafana | `3000` | Metrics dashboards |
+# 2. Build and start everything
+docker compose up -d --build
 
-Wait for all containers to be healthy:
-
-```bash
+# 3. Verify all containers are healthy
 docker compose ps
 ```
 
-### Start the API
-
-The API is containerised in `docker-compose.yml` (`api` service).  
-For local non-container debug, run:
-
-```bash
-uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Run database migrations
-
-```bash
-alembic upgrade head
-```
-
----
 
 ## Environment variables
 
