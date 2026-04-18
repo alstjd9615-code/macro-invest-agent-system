@@ -17,10 +17,23 @@ Design principles
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeLabel
 from domain.macro.snapshot import DegradedStatus
 from pipelines.ingestion.models import FreshnessStatus
+
+
+class RegimeNarrative(TypedDict):
+    """Typed return value from :func:`build_regime_narrative`."""
+
+    summary: str
+    rationale_points: list[str]
+    caveats: list[str]
+    data_quality_notes: list[str]
+    regime_label: str
+    regime_context: dict[str, str]
+    generated_at: str
 
 # ---------------------------------------------------------------------------
 # Narrative templates per regime label
@@ -120,7 +133,7 @@ _STATE_LABELS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 
-def build_regime_narrative(regime: MacroRegime) -> dict[str, object]:
+def build_regime_narrative(regime: MacroRegime) -> RegimeNarrative:
     """Build an analyst-facing narrative for *regime*.
 
     Returns a dict with the following keys:
@@ -252,12 +265,12 @@ def build_regime_narrative(regime: MacroRegime) -> dict[str, object]:
         "data_source": regime.metadata.get("source", ""),
     }
 
-    return {
-        "summary": summary,
-        "rationale_points": rationale_points,
-        "caveats": caveats,
-        "data_quality_notes": data_quality_notes,
-        "regime_label": regime.regime_label.value,
-        "regime_context": regime_context,
-        "generated_at": datetime.now(UTC).isoformat(),
-    }
+    return RegimeNarrative(
+        summary=summary,
+        rationale_points=rationale_points,
+        caveats=caveats,
+        data_quality_notes=data_quality_notes,
+        regime_label=regime.regime_label.value,
+        regime_context=regime_context,
+        generated_at=datetime.now(UTC).isoformat(),
+    )

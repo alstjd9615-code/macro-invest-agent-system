@@ -28,7 +28,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from apps.api.dependencies import get_regime_service
 from apps.api.dto.explanations import ExplanationResponse
 from apps.api.dto.trust import DataAvailability, FreshnessStatus, TrustMetadata
-from domain.macro.narrative_builder import build_regime_narrative
+from domain.macro.narrative_builder import RegimeNarrative, build_regime_narrative
+from pipelines.ingestion.models import FreshnessStatus as PipelineFreshnessStatus
 from services.interfaces import RegimeServiceInterface
 
 router = APIRouter(prefix="/api/explanations", tags=["explanations"])
@@ -91,11 +92,11 @@ async def get_regime_explanation(
             detail="No persisted regime available for narrative explanation.",
         )
 
-    narrative = build_regime_narrative(regime)
+    narrative: RegimeNarrative = build_regime_narrative(regime)
 
     is_degraded = regime.freshness_status in {
-        FreshnessStatus.STALE,
-        FreshnessStatus.UNKNOWN,
+        PipelineFreshnessStatus.STALE,
+        PipelineFreshnessStatus.UNKNOWN,
     } or str(regime.degraded_status) not in {"none", "DegradedStatus.NONE"}
     availability = (
         DataAvailability.PARTIAL
@@ -108,12 +109,12 @@ async def get_regime_explanation(
         explanation_id=f"regime:{regime.regime_id}",
         run_id=regime.regime_id,
         signal_id=None,
-        summary=str(narrative["summary"]),
-        rationale_points=[str(p) for p in narrative["rationale_points"]],  # type: ignore[arg-type]
-        caveats=[str(c) for c in narrative["caveats"]],  # type: ignore[arg-type]
-        data_quality_notes=[str(n) for n in narrative["data_quality_notes"]],  # type: ignore[arg-type]
-        regime_label=str(narrative["regime_label"]),
-        regime_context={k: str(v) for k, v in narrative["regime_context"].items()},  # type: ignore[union-attr]
+        summary=narrative["summary"],
+        rationale_points=narrative["rationale_points"],
+        caveats=narrative["caveats"],
+        data_quality_notes=narrative["data_quality_notes"],
+        regime_label=narrative["regime_label"],
+        regime_context=narrative["regime_context"],
         generated_at=datetime.now(UTC),
         trust=TrustMetadata(
             freshness_status=FreshnessStatus(regime.freshness_status.value),

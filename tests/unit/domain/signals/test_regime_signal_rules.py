@@ -84,9 +84,7 @@ class TestRegimeSignalMap:
 
     def test_fallback_returns_unclear_rules(self) -> None:
         """get_regime_signal_rules falls back to UNCLEAR for unknown labels."""
-        from domain.macro.regime import RegimeLabel as RL
-
-        unclear_rules = get_regime_signal_rules(RL.UNCLEAR)
+        unclear_rules = get_regime_signal_rules(RegimeLabel.UNCLEAR)
         # Ensure the function returns the UNCLEAR rules for a missing entry by
         # temporarily checking the fallback branch manually
         assert unclear_rules == REGIME_SIGNAL_MAP[RegimeLabel.UNCLEAR]

@@ -22,8 +22,8 @@ Environment variables are read from ``.env`` via :mod:`core.config.settings`.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -66,6 +66,10 @@ async def _lifespan(application: FastAPI) -> AsyncIterator[None]:  # noqa: ARG00
     that ``GET /api/regimes/latest`` returns a real response from the
     first request onwards.
 
+    The seeder is controlled by the ``SEED_ON_STARTUP`` environment variable
+    (default: ``True``).  Set ``SEED_ON_STARTUP=false`` in production
+    environments that rely on a real ingestion pipeline.
+
     Failure contract
     ----------------
     If seeding fails the application continues running but ``_seed_status``
@@ -73,6 +77,10 @@ async def _lifespan(application: FastAPI) -> AsyncIterator[None]:  # noqa: ARG00
     so operators can observe the degraded bootstrap state.
     """
     global _seed_status  # noqa: PLW0603
+    if not _settings.seed_on_startup:
+        _log.info("startup_seeder_disabled", reason="SEED_ON_STARTUP=false")
+        yield
+        return
     snapshot_store = _snapshot_store_singleton()
     regime_service = _regime_service_singleton()
     snapshot_service = MacroSnapshotService(repository=snapshot_store)

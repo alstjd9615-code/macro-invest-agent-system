@@ -18,6 +18,7 @@ Design constraints
 
 from __future__ import annotations
 
+import contextlib
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,7 +29,11 @@ from apps.api.dto.signals import SignalsLatestResponse
 from apps.api.dto.trust import DataAvailability, FreshnessStatus, TrustMetadata
 from apps.api.routers.explanations import build_and_register_explanation
 from domain.signals.registry import default_registry
-from services.interfaces import MacroServiceInterface, RegimeServiceInterface, SignalServiceInterface
+from services.interfaces import (
+    MacroServiceInterface,
+    RegimeServiceInterface,
+    SignalServiceInterface,
+)
 from services.signal_service import SignalService
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
@@ -68,10 +73,8 @@ async def get_latest_signals(
     """
     # --- Attempt regime-grounded path ---
     regime = None
-    try:
+    with contextlib.suppress(Exception):
         regime = await regime_service.get_latest_regime(as_of_date=date.today())
-    except Exception:  # noqa: BLE001
-        pass
 
     if regime is not None and isinstance(signal_service, SignalService):
         result = await signal_service.run_regime_grounded_engine(regime)
