@@ -25,17 +25,19 @@ from apps.api.dto.trust import TrustMetadata
 
 
 class ExplanationResponse(BaseModel, extra="forbid"):
-    """Response for GET /api/explanations/{id}.
+    """Response for GET /api/explanations/{id} and GET /api/explanations/regime/latest.
 
     Attributes:
         explanation_id: Unique explanation identifier (typically the run ID
             or a composite of run ID + signal ID).
         run_id: Signal engine run this explanation is associated with.
         signal_id: Signal this explanation describes; ``None`` for snapshot-level
-            explanations.
+            or regime-level explanations.
         summary: Short, human-readable explanation of the signal or snapshot
             state.
         rationale_points: Ordered list of supporting rationale bullet points.
+        regime_label: Regime label this explanation is grounded in, if available.
+        regime_context: Key/value regime metadata for UI rendering.
         generated_at: Timestamp when this explanation was produced.
         trust: Trust and freshness metadata.
     """
@@ -50,6 +52,14 @@ class ExplanationResponse(BaseModel, extra="forbid"):
     rationale_points: list[str] = Field(
         default_factory=list,
         description="Supporting rationale bullet points in display order",
+    )
+    regime_label: str | None = Field(
+        default=None,
+        description="Regime label this explanation is grounded in, if available",
+    )
+    regime_context: dict[str, str] = Field(
+        default_factory=dict,
+        description="Regime metadata for UI rendering (label, family, confidence, etc.)",
     )
     generated_at: datetime = Field(..., description="Timestamp when this explanation was produced")
     trust: TrustMetadata = Field(

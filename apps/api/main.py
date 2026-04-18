@@ -1,16 +1,17 @@
 """FastAPI application entry point for the macro-invest-agent-platform.
 
 Exposes:
-- ``GET /health``                     — liveness probe.
-- ``GET /readiness``                  — readiness probe.
-- ``GET /metrics``                    — Prometheus metrics scrape endpoint.
-- ``GET /api/snapshots/latest``       — latest macro snapshot (analyst read).
-- ``POST /api/snapshots/compare``     — snapshot comparison (analyst read).
-- ``GET /api/signals/latest``         — latest experimental signal evaluations.
-- ``GET /api/regimes/latest``         — latest persisted macro regime (analyst read).
-- ``GET /api/regimes/compare``        — current-vs-prior regime transition (analyst read).
-- ``GET /api/explanations/{id}``      — experimental explanation by ID.
-- ``GET /api/sessions/{id}``          — session context by ID (analyst read).
+- ``GET /health``                          — liveness probe.
+- ``GET /readiness``                       — readiness probe.
+- ``GET /metrics``                         — Prometheus metrics scrape endpoint.
+- ``GET /api/snapshots/latest``            — latest macro snapshot (analyst read).
+- ``POST /api/snapshots/compare``          — snapshot comparison (analyst read).
+- ``GET /api/signals/latest``              — latest regime-grounded signal evaluations.
+- ``GET /api/regimes/latest``              — latest persisted macro regime (analyst read).
+- ``GET /api/regimes/compare``             — current-vs-prior regime transition (analyst read).
+- ``GET /api/explanations/regime/latest``  — analyst narrative for current regime.
+- ``GET /api/explanations/{id}``           — explanation by ID.
+- ``GET /api/sessions/{id}``               — session context by ID (analyst read).
 
 Usage::
 
@@ -21,20 +22,63 @@ Environment variables are read from ``.env`` via :mod:`core.config.settings`.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from apps.api.dependencies import (
+    _regime_service_singleton,
+    _snapshot_store_singleton,
+)
 from apps.api.routers import explanations as explanations_router
 from apps.api.routers import regimes as regimes_router
 from apps.api.routers import sessions as sessions_router
 from apps.api.routers import signals as signals_router
 from apps.api.routers import snapshots as snapshots_router
+from apps.api.startup_seeder import seed_regime_from_synthetic_observations
 from core.config.settings import get_settings
+from core.logging.logger import get_logger
 from core.tracing.tracer import configure_tracing
+from services.macro_snapshot_service import MacroSnapshotService
+
+_log = get_logger(__name__)
+_settings = get_settings()
+
+# ---------------------------------------------------------------------------
+# Lifespan: seed in-memory stores on startup
+# ---------------------------------------------------------------------------
+
+
+@asynccontextmanager
+async def _lifespan(application: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
+    """Seed the in-memory regime store on application startup.
+
+    The in-memory snapshot/regime stores are empty at boot.  This hook
+    seeds them with a synthetic macro snapshot and a derived regime so
+    that ``GET /api/regimes/latest`` returns a real response from the
+    first request onwards.
+    """
+    snapshot_store = _snapshot_store_singleton()
+    regime_service = _regime_service_singleton()
+    snapshot_service = MacroSnapshotService(repository=snapshot_store)
+    try:
+        await seed_regime_from_synthetic_observations(
+            snapshot_service=snapshot_service,
+            regime_service=regime_service,
+        )
+        _log.info("startup_seeder_complete")
+    except Exception:  # noqa: BLE001
+        _log.warning("startup_seeder_failed", exc_info=True)
+    yield
+
 
 # ---------------------------------------------------------------------------
 # Application setup
 # ---------------------------------------------------------------------------
+
+configure_tracing(_settings)
 
 app = FastAPI(
     title="macro-invest-agent-platform",
@@ -42,14 +86,12 @@ app = FastAPI(
     description=(
         "Macroeconomic investment agent platform — analyst-facing read API. "
         "Provides read-only access to macro observations/snapshots and regime outputs. "
-        "Signals and explanations are currently marked experimental surfaces."
+        "Signals are regime-grounded; explanations are analyst-facing narratives."
     ),
     docs_url="/docs",
     redoc_url=None,
+    lifespan=_lifespan,
 )
-
-_settings = get_settings()
-configure_tracing(_settings)
 
 # ---------------------------------------------------------------------------
 # Register analyst-facing routers
@@ -87,11 +129,6 @@ async def readiness() -> dict[str, str]:
     feature-store ping when those dependencies are required at startup.
     """
     return {"status": "ready", "env": _settings.app_env.value}
-
-
-# ---------------------------------------------------------------------------
-# Prometheus metrics endpoint
-# ---------------------------------------------------------------------------
 
 
 @app.get("/metrics", tags=["ops"], summary="Prometheus metrics scrape endpoint")
