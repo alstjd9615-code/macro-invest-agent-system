@@ -31,11 +31,15 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
         strength: Confidence label (``"weak"``, ``"moderate"``, ``"strong"``, etc.).
         score: Confidence score in the range ``[0.0, 1.0]``.
         trend: Underlying trend direction (``"up"``, ``"down"``, ``"neutral"``).
-        rationale: Human-readable explanation of the signal.
+        rationale: Human-readable regime-grounded rationale for this signal.
         triggered_at: Timestamp when the signal was generated.
         rule_results: Per-rule evaluation results (rule_name → passed).
         rules_passed: Count of rules that passed.
         rules_total: Total number of rules evaluated.
+        asset_class: Target asset class (e.g. ``"equities"``, ``"bonds"``).
+        supporting_regime: Regime label that grounds this signal.
+        supporting_drivers: Macro factors supporting this signal direction.
+        conflicting_drivers: Macro factors that reduce signal confidence.
     """
 
     signal_id: str = Field(..., description="Unique signal identifier")
@@ -43,13 +47,29 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
     strength: str = Field(..., description="Signal confidence: very_weak … very_strong")
     score: float = Field(..., ge=0.0, le=1.0, description="Confidence score [0.0, 1.0]")
     trend: str = Field(default="neutral", description="Trend direction: up / down / neutral")
-    rationale: str = Field(default="", description="Human-readable signal rationale")
+    rationale: str = Field(default="", description="Regime-grounded analyst rationale")
     triggered_at: datetime = Field(..., description="Timestamp when signal was generated")
     rule_results: dict[str, bool] = Field(
         default_factory=dict, description="Per-rule evaluation results"
     )
     rules_passed: int = Field(default=0, ge=0, description="Count of rules that passed")
     rules_total: int = Field(default=0, ge=0, description="Total rules evaluated")
+    asset_class: str = Field(
+        default="",
+        description="Target asset class (equities, bonds, commodities, cash, all)",
+    )
+    supporting_regime: str = Field(
+        default="",
+        description="Regime label that grounds this signal",
+    )
+    supporting_drivers: list[str] = Field(
+        default_factory=list,
+        description="Macro factors supporting this signal direction",
+    )
+    conflicting_drivers: list[str] = Field(
+        default_factory=list,
+        description="Macro factors that reduce signal confidence",
+    )
 
 
 class SignalsLatestResponse(BaseModel, extra="forbid"):

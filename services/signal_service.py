@@ -1,17 +1,21 @@
-"""Signal evaluation service implementation skeleton."""
+"""Signal evaluation service implementation."""
+
+import uuid
+from datetime import UTC, datetime
 
 from core.logging.logger import get_logger
 from core.metrics import SIGNAL_GENERATION_DURATION
 from core.tracing import get_tracer
 from core.tracing.span_attributes import SIGNAL_COUNT
 from domain.macro.models import MacroSnapshot
+from domain.macro.regime import MacroRegime
 from domain.signals.engine import SignalEngine
-from domain.signals.models import SignalDefinition, SignalResult
+from domain.signals.models import SignalDefinition, SignalOutput, SignalResult
+from domain.signals.regime_signal_rules import get_regime_signal_rules
 from services.interfaces import SignalServiceInterface
 
 _log = get_logger(__name__)
 _tracer = get_tracer(__name__)
-
 
 class SignalService(SignalServiceInterface):
     """Skeleton implementation of signal service.
@@ -89,3 +93,69 @@ class SignalService(SignalServiceInterface):
             signals_generated=len(result.signals),
         )
         return result
+
+    async def run_regime_grounded_engine(self, regime: MacroRegime) -> SignalResult:
+        """Run the regime-grounded signal engine.
+
+        Derives investment signals deterministically from the current macro
+        regime label.  Each signal is grounded in the regime with an
+        analyst-facing rationale and structured driver lists.
+
+        Args:
+            regime: The current :class:`~domain.macro.regime.MacroRegime`.
+
+        Returns:
+            :class:`~domain.signals.models.SignalResult` with all regime-derived signals.
+        """
+        run_id = str(uuid.uuid4())
+        rules = get_regime_signal_rules(regime.regime_label)
+        now = datetime.now(UTC)
+
+        signals: list[SignalOutput] = []
+        for rule in rules:
+            signal_out = SignalOutput(
+                signal_id=rule.signal_id,
+                signal_type=rule.signal_direction,
+                strength=rule.signal_strength,
+                score=rule.signal_confidence,
+                triggered_at=now,
+                trend=rule.trend,
+                rationale=rule.regime_rationale,
+                rule_results={"regime_rule": True},
+                asset_class=rule.asset_class,
+                supporting_regime=rule.supporting_regime,
+                supporting_drivers=list(rule.supporting_drivers),
+                conflicting_drivers=list(rule.conflicting_drivers),
+            )
+            signals.append(signal_out)
+
+        _log.debug(
+            "regime_grounded_engine_complete",
+            regime_label=regime.regime_label.value,
+            signals_generated=len(signals),
+        )
+        from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
+        from domain.macro.models import MacroFeature, MacroSnapshot
+
+        placeholder_feature = MacroFeature(
+            indicator_type=MacroIndicatorType.PMI,
+            source=MacroSourceType.MARKET_DATA,
+            value=0.0,
+            timestamp=datetime(regime.as_of_date.year, regime.as_of_date.month, 1, tzinfo=UTC),
+            frequency=DataFrequency.MONTHLY,
+            country="US",
+            metadata={"regime_label": regime.regime_label.value},
+        )
+        placeholder_snapshot = MacroSnapshot(
+            features=[placeholder_feature],
+            snapshot_time=now,
+            version=1,
+        )
+
+        return SignalResult(
+            run_id=run_id,
+            timestamp=now,
+            macro_snapshot=placeholder_snapshot,
+            signals=signals,
+            success=True,
+        )

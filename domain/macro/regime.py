@@ -90,6 +90,14 @@ class MacroRegime(BaseModel, extra="forbid"):
 
     transition: RegimeTransition = Field(default_factory=RegimeTransition)
     rationale_summary: str = Field(default="")
+    metadata: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Arbitrary key/value metadata attached at regime creation time. "
+            "Seeded/bootstrap regimes carry: seeded='true', source='synthetic_seed'. "
+            "Production regimes leave this empty."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_label_family_alignment(self) -> MacroRegime:

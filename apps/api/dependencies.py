@@ -48,11 +48,27 @@ def _signal_service_singleton() -> SignalService:
 
 
 @lru_cache(maxsize=1)
+def _snapshot_store_singleton() -> InMemoryMacroSnapshotStore:
+    """Return the shared in-memory snapshot store.
+
+    Exposed so the startup seeder can write into the same instance that
+    :func:`_regime_service_singleton` reads from.
+    """
+    return InMemoryMacroSnapshotStore()
+
+
+@lru_cache(maxsize=1)
+def _regime_store_singleton() -> InMemoryMacroRegimeStore:
+    """Return the shared in-memory regime store."""
+    return InMemoryMacroRegimeStore()
+
+
+@lru_cache(maxsize=1)
 def _regime_service_singleton() -> MacroRegimeService:
     """Return a cached phase-3 regime service with in-memory repositories."""
     return MacroRegimeService(
-        snapshot_repository=InMemoryMacroSnapshotStore(),
-        regime_repository=InMemoryMacroRegimeStore(),
+        snapshot_repository=_snapshot_store_singleton(),
+        regime_repository=_regime_store_singleton(),
     )
 
 
@@ -80,4 +96,19 @@ def get_regime_service() -> RegimeServiceInterface:
 
 
 # Re-export for convenience
-__all__ = ["get_macro_service", "get_signal_service", "get_regime_service", "Depends"]
+__all__ = [
+    "get_macro_service",
+    "get_signal_service",
+    "get_regime_service",
+    "get_snapshot_store",
+    "Depends",
+]
+
+
+def get_snapshot_store() -> InMemoryMacroSnapshotStore:
+    """FastAPI dependency: provide the shared snapshot store.
+
+    Used by the startup seeder to populate the same store that the regime
+    service reads from.
+    """
+    return _snapshot_store_singleton()
