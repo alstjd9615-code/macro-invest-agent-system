@@ -14,7 +14,7 @@
 #   make up           Start local infrastructure (docker compose up -d)
 #   make down         Stop local infrastructure (docker compose down)
 #   make logs         Tail docker compose logs
-# =============================================================================
+#  	 =============================================================================
 
 .PHONY: help install format lint typecheck test test-unit test-contract up build down logs
 
@@ -55,9 +55,6 @@ build: ## Rebuild images and start all services (use after code changes)
 
 down: ## Stop local infrastructure
 	docker compose down
-
-build: ## Rebuild images and restart services
-	docker compose up -d --build
 
 logs: ## Tail docker compose logs (Ctrl-C to stop)
 	docker compose logs -f
