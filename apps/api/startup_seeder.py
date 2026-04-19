@@ -237,6 +237,15 @@ async def seed_regime_from_synthetic_observations(
         regime = await regime_service.build_and_save_regime(as_of_date=target_date)
         # Stamp seeder metadata onto the persisted regime
         regime.metadata.update(SEEDER_METADATA)
+        # Re-derive warnings now that is_seeded=True is known
+        from domain.macro.regime_mapping import derive_regime_warnings
+        regime.warnings = derive_regime_warnings(
+            snapshot=snapshot,
+            label=regime.regime_label,
+            confidence=regime.confidence,
+            missing_inputs=list(regime.missing_inputs),
+            is_seeded=True,
+        )
     except Exception as exc:  # noqa: BLE001
         _log.error("startup_seeder_regime_failed", error=str(exc))
         return SeedStatus(success=False, error=f"Regime build failed: {exc}")

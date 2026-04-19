@@ -11,6 +11,7 @@ from domain.macro.regime_mapping import (
     build_regime_rationale,
     derive_regime_confidence,
     derive_regime_missing_inputs,
+    derive_regime_warnings,
     map_snapshot_to_regime,
 )
 from domain.macro.regime_transition import derive_regime_transition
@@ -34,6 +35,8 @@ class MacroRegimeService(RegimeServiceInterface):
             raise ValueError(f"No snapshot available on or before {as_of_date.isoformat()}")
 
         label, family = map_snapshot_to_regime(snapshot)
+        confidence = derive_regime_confidence(snapshot=snapshot, label=label)
+        missing_inputs = derive_regime_missing_inputs(snapshot)
         return MacroRegime(
             as_of_date=snapshot.as_of_date,
             regime_label=label,
@@ -46,11 +49,18 @@ class MacroRegimeService(RegimeServiceInterface):
                 "policy_state": snapshot.policy_state.value,
                 "financial_conditions_state": snapshot.financial_conditions_state.value,
             },
-            confidence=derive_regime_confidence(snapshot=snapshot, label=label),
+            confidence=confidence,
             freshness_status=snapshot.freshness_status,
             degraded_status=snapshot.degraded_status,
-            missing_inputs=derive_regime_missing_inputs(snapshot),
+            missing_inputs=missing_inputs,
             rationale_summary=build_regime_rationale(snapshot=snapshot, label=label),
+            warnings=derive_regime_warnings(
+                snapshot=snapshot,
+                label=label,
+                confidence=confidence,
+                missing_inputs=missing_inputs,
+                is_seeded=False,
+            ),
         )
 
     async def build_and_save_regime(self, as_of_date: date) -> MacroRegime:
