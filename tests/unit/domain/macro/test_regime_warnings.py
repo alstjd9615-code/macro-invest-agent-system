@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi.testclient import TestClient
 
-from domain.macro.regime import RegimeConfidence, RegimeFamily, RegimeLabel
+from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
+from apps.api.dependencies import get_regime_service
+from apps.api.main import app
+from domain.macro.regime import (
+    MacroRegime,
+    RegimeConfidence,
+    RegimeFamily,
+    RegimeLabel,
+    RegimeTransition,
+    RegimeTransitionType,
+)
 from domain.macro.regime_mapping import derive_regime_warnings
 from domain.macro.snapshot import (
     DegradedStatus,
@@ -18,6 +30,7 @@ from domain.macro.snapshot import (
     PolicyState,
 )
 from pipelines.ingestion.models import FreshnessStatus
+from services.macro_regime_service import MacroRegimeService
 
 
 def _snapshot(
@@ -202,8 +215,6 @@ class TestMacroRegimeWarningsField:
     """Verify warnings is stored on MacroRegime and accessible at runtime."""
 
     def test_regime_warnings_field_is_list(self) -> None:
-        from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeFamily
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_label=RegimeLabel.GOLDILOCKS,
@@ -215,8 +226,6 @@ class TestMacroRegimeWarningsField:
         assert regime.warnings == []
 
     def test_regime_accepts_warnings_at_construction(self) -> None:
-        from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeFamily
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_label=RegimeLabel.GOLDILOCKS,
@@ -231,10 +240,6 @@ class TestMacroRegimeWarningsField:
 @pytest.mark.asyncio
 async def test_build_regime_populates_warnings_for_healthy_snapshot() -> None:
     """MacroRegimeService.build_regime populates warnings for a healthy snapshot."""
-    from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
-
-    from services.macro_regime_service import MacroRegimeService
-
     repo = InMemoryMacroSnapshotStore()
     await repo.save_snapshot(
         _snapshot(
@@ -257,10 +262,6 @@ async def test_build_regime_populates_warnings_for_healthy_snapshot() -> None:
 @pytest.mark.asyncio
 async def test_build_regime_populates_warnings_for_degraded_snapshot() -> None:
     """MacroRegimeService.build_regime surfaces warnings when snapshot is degraded."""
-    from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
-
-    from services.macro_regime_service import MacroRegimeService
-
     repo = InMemoryMacroSnapshotStore()
     await repo.save_snapshot(
         _snapshot(
@@ -282,22 +283,6 @@ class TestRegimeLatestResponseWarnings:
     """Test that the regime router surfaces warnings in the API response."""
 
     def test_latest_response_includes_warnings_field(self) -> None:
-        from datetime import UTC
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
@@ -324,22 +309,6 @@ class TestRegimeLatestResponseWarnings:
             app.dependency_overrides.clear()
 
     def test_latest_response_status_success_for_healthy_regime(self) -> None:
-        from datetime import UTC
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
@@ -362,22 +331,6 @@ class TestRegimeLatestResponseWarnings:
             app.dependency_overrides.clear()
 
     def test_latest_response_status_bootstrap_for_seeded_regime(self) -> None:
-        from datetime import UTC
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
@@ -403,22 +356,6 @@ class TestRegimeLatestResponseWarnings:
             app.dependency_overrides.clear()
 
     def test_latest_response_status_stale(self) -> None:
-        from datetime import UTC
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
@@ -441,24 +378,6 @@ class TestRegimeLatestResponseWarnings:
             app.dependency_overrides.clear()
 
     def test_compare_response_includes_warnings_and_rationale(self) -> None:
-        from datetime import UTC
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-            RegimeTransition,
-            RegimeTransitionType,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         current = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),

@@ -21,7 +21,6 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.dependencies import (
