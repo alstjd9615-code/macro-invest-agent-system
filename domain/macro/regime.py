@@ -90,6 +90,15 @@ class MacroRegime(BaseModel, extra="forbid"):
 
     transition: RegimeTransition = Field(default_factory=RegimeTransition)
     rationale_summary: str = Field(default="")
+    warnings: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Pre-computed analyst-facing warnings summarising degraded, stale, "
+            "missing-input, or bootstrap conditions.  Populated at build time so "
+            "downstream API and UI layers do not need to re-derive these states "
+            "from multiple individual fields."
+        ),
+    )
     metadata: dict[str, str] = Field(
         default_factory=dict,
         description=(

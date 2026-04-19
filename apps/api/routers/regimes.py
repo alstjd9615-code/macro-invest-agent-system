@@ -8,10 +8,32 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from apps.api.dependencies import get_regime_service
 from apps.api.dto.regimes import RegimeCompareResponse, RegimeLatestResponse, RegimeTransitionDTO
-from domain.macro.regime import MacroRegime
+from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeLabel
+from domain.macro.snapshot import DegradedStatus
+from pipelines.ingestion.models import FreshnessStatus
 from services.interfaces import RegimeServiceInterface
 
 router = APIRouter(prefix="/api/regimes", tags=["regimes"])
+
+
+def _compute_regime_status(regime: MacroRegime) -> str:
+    """Derive a single product-surface status token from a regime object.
+
+    Returns one of: ``'success'``, ``'degraded'``, ``'stale'``, ``'bootstrap'``.
+    Priority order: bootstrap → stale → degraded → success.
+    """
+    if regime.metadata.get("seeded") == "true":
+        return "bootstrap"
+    if regime.freshness_status in {FreshnessStatus.STALE, FreshnessStatus.UNKNOWN}:
+        return "stale"
+    if (
+        regime.degraded_status
+        in {DegradedStatus.PARTIAL, DegradedStatus.MISSING, DegradedStatus.SOURCE_UNAVAILABLE}
+        or regime.confidence == RegimeConfidence.LOW
+        or regime.regime_label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}
+    ):
+        return "degraded"
+    return "success"
 
 
 def _to_latest_response(regime: MacroRegime) -> RegimeLatestResponse:
@@ -35,6 +57,8 @@ def _to_latest_response(regime: MacroRegime) -> RegimeLatestResponse:
             changed=regime.transition.changed,
         ),
         rationale_summary=regime.rationale_summary,
+        warnings=list(regime.warnings),
+        status=_compute_regime_status(regime),
         is_seeded=is_seeded,
         data_source=data_source,
     )
@@ -81,4 +105,7 @@ async def compare_regimes(
         changed=current.transition.changed,
         current_confidence=current.confidence.value,
         prior_confidence=previous.confidence.value if previous is not None else None,
+        current_rationale_summary=current.rationale_summary,
+        warnings=list(current.warnings),
+        is_seeded=current.metadata.get("seeded") == "true",
     )

@@ -151,3 +151,95 @@ def derive_regime_confidence(
 
 def derive_regime_missing_inputs(snapshot: MacroSnapshotState) -> list[str]:
     return list(snapshot.missing_indicators)
+
+
+def derive_regime_warnings(
+    snapshot: MacroSnapshotState,
+    label: RegimeLabel,
+    confidence: RegimeConfidence,
+    missing_inputs: list[str],
+    is_seeded: bool = False,
+) -> list[str]:
+    """Derive analyst-facing warning strings from snapshot and regime state.
+
+    Each warning is a concise, human-readable sentence suitable for direct
+    rendering as a badge or tooltip in the product UI.  Warnings do not
+    duplicate the ``rationale_summary``; they specifically flag degraded,
+    stale, missing-input, or bootstrap conditions that require analyst
+    attention.
+
+    Args:
+        snapshot: The macro snapshot state used to derive this regime.
+        label: The resolved regime label.
+        confidence: The derived regime confidence level.
+        missing_inputs: Indicators that were absent when the regime was built.
+        is_seeded: True when this regime was created by the startup bootstrap
+            seeder from synthetic data.
+
+    Returns:
+        Ordered list of warning strings.  Empty list when the regime is
+        fully healthy and not synthetic.
+    """
+    warnings: list[str] = []
+
+    if is_seeded:
+        warnings.append(
+            "Bootstrap data: this regime was generated from synthetic seed data "
+            "and does not reflect a real ingestion pipeline run."
+        )
+
+    if snapshot.freshness_status == FreshnessStatus.STALE:
+        warnings.append(
+            "Stale data: underlying indicators are older than the expected "
+            "update window.  This regime classification may be outdated."
+        )
+    elif snapshot.freshness_status == FreshnessStatus.LATE:
+        warnings.append(
+            "Late data: some indicators have not been updated within their "
+            "expected window.  Regime accuracy may be reduced."
+        )
+    elif snapshot.freshness_status == FreshnessStatus.UNKNOWN:
+        warnings.append(
+            "Data freshness unknown: unable to confirm whether underlying "
+            "indicators are current.  Treat this regime with caution."
+        )
+
+    if snapshot.degraded_status == DegradedStatus.MISSING:
+        warnings.append(
+            "Critical data missing: the regime was derived from a severely "
+            "incomplete snapshot.  Classification accuracy is significantly reduced."
+        )
+    elif snapshot.degraded_status == DegradedStatus.PARTIAL:
+        warnings.append(
+            "Partial data: some indicators were missing when this regime was "
+            "built.  Classification may be less reliable than usual."
+        )
+    elif snapshot.degraded_status == DegradedStatus.SOURCE_UNAVAILABLE:
+        warnings.append(
+            "Data source unavailable: regime reflects the last available "
+            "snapshot.  Real-time conditions may have changed."
+        )
+
+    if missing_inputs:
+        count = len(missing_inputs)
+        names = ", ".join(missing_inputs[:3])
+        suffix = f" and {count - 3} more" if count > 3 else ""
+        warnings.append(
+            f"Missing {count} indicator(s): {names}{suffix}. "
+            "Regime derived from partial evidence."
+        )
+
+    if confidence == RegimeConfidence.LOW:
+        warnings.append(
+            "Low confidence: conflicting or insufficient signals reduce the "
+            "reliability of this regime label.  Do not base high-conviction "
+            "decisions on this classification alone."
+        )
+
+    if label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
+        warnings.append(
+            "Non-directional regime (mixed/unclear): no asset-level signals "
+            "can be derived with meaningful confidence from this classification."
+        )
+
+    return warnings
