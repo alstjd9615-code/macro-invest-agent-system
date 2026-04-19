@@ -47,6 +47,16 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
             low-confidence regime.  Consumers should render a degraded badge.
         caveat: Analyst-facing explanation of why the signal is degraded, or
             ``None`` when ``is_degraded`` is ``False``.
+        conflict_status: Conflict/conviction level — ``clean``, ``tension``,
+            ``mixed``, or ``low_conviction``.  This is orthogonal to
+            ``is_degraded``: degraded = data problem; conflict = analytical
+            tension.
+        is_mixed: ``True`` when ``conflict_status`` is ``mixed`` or
+            ``low_conviction``.
+        conflict_note: Analyst-facing explanation of the conflict situation,
+            or ``None`` when ``conflict_status`` is ``clean``.
+        quant_support_level: Human-readable quant support — ``strong``,
+            ``moderate``, ``weak``, or ``unknown``.
     """
 
     signal_id: str = Field(..., description="Unique signal identifier")
@@ -89,6 +99,35 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
         description=(
             "Analyst-facing caveat explaining why this signal is degraded. "
             "None when is_degraded=False."
+        ),
+    )
+    conflict_status: str = Field(
+        default="clean",
+        description=(
+            "Conflict/conviction status: 'clean' | 'tension' | 'mixed' | 'low_conviction'. "
+            "Distinct from is_degraded — reflects analytical tension, not data quality. "
+            "See Conflict Surface v1 semantics in the API contract docs."
+        ),
+    )
+    is_mixed: bool = Field(
+        default=False,
+        description=(
+            "True when conflict_status is 'mixed' or 'low_conviction'. "
+            "Convenience boolean to avoid string comparison in UI rendering."
+        ),
+    )
+    conflict_note: str | None = Field(
+        default=None,
+        description=(
+            "Analyst-facing explanation of why this signal is mixed or low-conviction. "
+            "None when conflict_status is 'clean'."
+        ),
+    )
+    quant_support_level: str = Field(
+        default="unknown",
+        description=(
+            "Quant support level: 'strong' | 'moderate' | 'weak' | 'unknown'. "
+            "Derived from QuantScoreBundle.overall_support."
         ),
     )
 

@@ -165,6 +165,18 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
     """Convert a domain :class:`~domain.signals.models.SignalOutput` to :class:`SignalSummaryDTO`."""
     rules_total = len(signal.rule_results)
     rules_passed = sum(1 for v in signal.rule_results.values() if v)
+
+    # Conflict surface fields — flatten from ConflictSurface if present
+    conflict_status = "clean"
+    is_mixed = False
+    conflict_note = None
+    quant_support_level = "unknown"
+    if signal.conflict is not None:
+        conflict_status = signal.conflict.conflict_status.value
+        is_mixed = signal.conflict.is_mixed
+        conflict_note = signal.conflict.conflict_note
+        quant_support_level = signal.conflict.quant_support_level
+
     return SignalSummaryDTO(
         signal_id=signal.signal_id,
         signal_type=str(signal.signal_type),
@@ -182,4 +194,8 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
         conflicting_drivers=list(signal.conflicting_drivers),
         is_degraded=signal.is_degraded,
         caveat=signal.caveat,
+        conflict_status=conflict_status,
+        is_mixed=is_mixed,
+        conflict_note=conflict_note,
+        quant_support_level=quant_support_level,
     )

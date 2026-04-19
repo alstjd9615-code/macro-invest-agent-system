@@ -1,6 +1,41 @@
 # Changelog
 
-## 2026-04-17
+## 2026-04-19
+
+### Added
+- **Quant Scoring Engine v1** (`domain/quant/`): deterministic per-dimension scoring
+  for growth, inflation, labor, policy, and financial conditions.  Produces a
+  `QuantScoreBundle` with primary dimension scores and secondary measures
+  (`breadth`, `momentum`, `change_intensity`, `overall_support`).
+- **`QuantScoringService`** (`services/quant_scoring_service.py`): thin, stateless
+  wrapper for composable injection.
+- **Confidence Refactor**: `derive_regime_confidence()` now accepts an optional
+  `QuantScoreBundle` and applies quant-informed downgrade rules (breadth < 0.60
+  caps at MEDIUM; overall_support < 0.40 downgrades one level).
+- **`MacroRegime.quant_scores`**: regimes built by `MacroRegimeService.build_regime()`
+  now carry the quant bundle for downstream consumers.
+- **Signal score adjustment** (`_adjust_signal_score()`): signal scores are now
+  modulated by regime confidence (HIGH=1.0×, MEDIUM=0.85×, LOW=0.65×) and weak
+  quant support (additional 0.85× when overall_support < 0.35).
+- **Conflict Surface v1** (`domain/signals/conflict.py`): explicit, deterministic
+  `ConflictStatus` (`clean | tension | mixed | low_conviction`) and
+  `ConflictSurface` model.  Populated on every regime-grounded signal.
+- **Conflict fields in API DTO**: `SignalSummaryDTO` now exposes
+  `conflict_status`, `is_mixed`, `conflict_note`, `quant_support_level`.
+- 88 new unit tests (33 quant, 22 confidence, 33 conflict); total: 875.
+- New docs: `docs/conflict_surface_v1.md`, `docs/backlog/0403-quant-confidence-conflict.md`.
+- Updated `docs/regime_confidence_policy.md` with quant adjustment rules,
+  signal confidence derivation, and degraded/mixed distinction.
+
+### Changed
+- `domain/signals/models.py`: added `conflict: ConflictSurface | None` to
+  `SignalOutput` (default `None`; backward compatible).
+- `apps/api/dto/signals.py`: added conflict fields to `SignalSummaryDTO`
+  (all default to safe values; backward compatible).
+- `apps/api/dto/builders.py`: `signal_output_to_dto()` maps conflict fields.
+- `services/signal_service.py`: `run_regime_grounded_engine()` now derives
+  and attaches a `ConflictSurface` per signal.
+
 
 ### Added
 - Added `.github/copilot-instructions.md` to define a reusable backlog-autopilot agent procedure for this repository.

@@ -13,7 +13,10 @@ Macroeconomic data ingestion and analysis platform for deterministic investment 
 - **Phase 1 (Macro Data Foundation): baseline complete**
 - **Phase 2 (Macro Snapshot Layer): baseline complete**
 - **Phase 3 (Macro Regime Engine): baseline complete**
-- **Legacy surface cleanup: in progress (truthful naming + experimental containment)**
+- **Active workstream — Multi-Engine Analysis Hub:**
+  - ✅ Quant Scoring Engine v1 (`domain/quant/`)
+  - ✅ Confidence Refactor — quant-informed regime + signal confidence
+  - ✅ Conflict Surface v1 — explicit mixed/low-conviction signal semantics
 
 ## Local run (quickstart)
 
@@ -40,12 +43,26 @@ docker compose up -d
 
 ## High-level components
 
-- **Domain/Core**: deterministic macro, snapshot, and regime models/rules.
+- **Domain/Core**: deterministic macro, snapshot, regime, quant-score, and conflict models/rules.
 - **Pipelines**: macro ingestion and normalization workflows.
 - **Snapshot layer**: deterministic macro state structuring and comparison.
 - **Regime layer**: deterministic snapshot-to-regime contract and classification.
+- **Quant Scoring Engine**: dimension scores (growth/inflation/labor/policy/financial conditions)
+  plus secondary measures (breadth, momentum, change intensity, overall support).
+- **Confidence layer**: regime and signal confidence informed by quant scores, freshness, and
+  degraded status.
+- **Conflict Surface**: explicit conflict/conviction status (clean / tension / mixed /
+  low_conviction) distinguishing analytical tension from data quality issues.
 - **API**: analyst-facing read API (signals/explanations are currently experimental surfaces).
 - **Observability**: Prometheus metrics + Grafana dashboards.
+
+## Key semantic distinctions
+
+| Concept | Meaning | Field |
+|---|---|---|
+| **Degraded** | Data/freshness/quality problem | `is_degraded`, `caveat` |
+| **Mixed / Conflicted** | Analytical tension between macro drivers | `is_mixed`, `conflict_status` |
+| **Low confidence** | Regime label has insufficient analytical certainty | `confidence` |
 
 ## Canonical documentation
 
@@ -58,6 +75,8 @@ docker compose up -d
 - Snapshot contract: `docs/snapshot_schema.md`
 - Snapshot state derivation rules: `docs/state_derivation_rules.md`
 - Regime engine docs index: `docs/regime_engine.md`
+- Regime confidence policy (updated): `docs/regime_confidence_policy.md`
+- Conflict Surface v1: `docs/conflict_surface_v1.md`
 - Legacy surface status: `docs/legacy_surface_status.md`
 - CI/CD quick guide: `docs/ci_cd.md`
 - Metrics reference: `docs/metrics.md`

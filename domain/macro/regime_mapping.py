@@ -17,6 +17,7 @@ from domain.macro.snapshot import (
     MacroSnapshotState,
     PolicyState,
 )
+from domain.quant.models import QuantScoreBundle
 from pipelines.ingestion.models import FreshnessStatus
 
 
@@ -116,8 +117,38 @@ def build_regime_rationale(snapshot: MacroSnapshotState, label: RegimeLabel) -> 
 def derive_regime_confidence(
     snapshot: MacroSnapshotState,
     label: RegimeLabel,
+    quant_scores: QuantScoreBundle | None = None,
 ) -> RegimeConfidence:
-    """Derive confidence from freshness, degraded status, and state coherence."""
+    """Derive confidence from freshness, degraded status, state coherence, and quant scores.
+
+    Confidence derivation order
+    ---------------------------
+    1. Hard floor conditions — always LOW regardless of quant support:
+       - critical degraded status (``missing``, ``source_unavailable``)
+       - stale or unknown freshness
+    2. Partial / late conditions — floor at MEDIUM:
+       - ``degraded_status = partial``
+       - ``freshness_status = late``
+    3. Unknown category states — one unknown → MEDIUM; two or more → LOW.
+    4. Non-directional labels — ``mixed`` / ``unclear`` → always LOW.
+    5. Quant score adjustment (applied only when quant_scores provided and
+       preliminary confidence is HIGH or MEDIUM):
+       - ``breadth < 0.60`` (fewer than 3 of 5 dimensions known) →
+         cap at MEDIUM, cannot be HIGH.
+       - ``overall_support < 0.40`` → downgrade HIGH → MEDIUM; MEDIUM → LOW
+         (quant shows insufficient positive support for the current label).
+       - ``overall_support >= 0.65`` and all states clean → confirm HIGH.
+
+    Args:
+        snapshot: The macro snapshot used to derive this regime.
+        label: The resolved regime label.
+        quant_scores: Optional :class:`~domain.quant.models.QuantScoreBundle`.
+            When provided, quant signals may further adjust confidence.
+
+    Returns:
+        :class:`RegimeConfidence` — ``high``, ``medium``, or ``low``.
+    """
+    # --- Hard floor conditions (always LOW) ---
     if snapshot.degraded_status in {DegradedStatus.MISSING, DegradedStatus.SOURCE_UNAVAILABLE}:
         return RegimeConfidence.LOW
     if snapshot.freshness_status in {FreshnessStatus.STALE, FreshnessStatus.UNKNOWN}:
@@ -125,11 +156,13 @@ def derive_regime_confidence(
 
     confidence = RegimeConfidence.HIGH
 
+    # --- Partial / late → floor at MEDIUM ---
     if snapshot.degraded_status == DegradedStatus.PARTIAL:
         confidence = RegimeConfidence.MEDIUM
     if snapshot.freshness_status == FreshnessStatus.LATE:
         confidence = RegimeConfidence.MEDIUM
 
+    # --- Unknown category states ---
     unknown_count = sum(
         1
         for state in (
@@ -144,8 +177,22 @@ def derive_regime_confidence(
     if unknown_count > 0:
         confidence = RegimeConfidence.MEDIUM if unknown_count == 1 else RegimeConfidence.LOW
 
+    # --- Non-directional labels always LOW ---
     if label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
         return RegimeConfidence.LOW
+
+    # --- Quant score adjustment (Chunk 2 addition) ---
+    if quant_scores is not None and confidence != RegimeConfidence.LOW:
+        if quant_scores.breadth < 0.60 and confidence == RegimeConfidence.HIGH:
+            # Insufficient dimension coverage — cannot support HIGH confidence
+            confidence = RegimeConfidence.MEDIUM
+        if quant_scores.overall_support < 0.40:
+            # Weak quant support — downgrade one level
+            if confidence == RegimeConfidence.HIGH:
+                confidence = RegimeConfidence.MEDIUM
+            elif confidence == RegimeConfidence.MEDIUM:
+                confidence = RegimeConfidence.LOW
+
     return confidence
 
 

@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 from domain.macro.models import MacroSnapshot
+from domain.signals.conflict import ConflictSurface
 from domain.signals.enums import SignalStrength, SignalType, TrendDirection
 
 
@@ -120,6 +121,15 @@ class SignalOutput(BaseModel):
         description=(
             "Analyst-facing caveat string explaining why this signal is degraded or should "
             "be interpreted with reduced confidence.  None when is_degraded=False."
+        ),
+    )
+    conflict: ConflictSurface | None = Field(
+        default=None,
+        description=(
+            "Conflict Surface v1: analytical conflict descriptor for this signal. "
+            "Populated when signals are derived via the regime-grounded engine. "
+            "Distinct from is_degraded (which reflects data/freshness problems). "
+            "None in the legacy snapshot-based engine path."
         ),
     )
 
