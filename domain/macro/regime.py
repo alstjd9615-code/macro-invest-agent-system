@@ -9,6 +9,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, model_validator
 
 from domain.macro.snapshot import DegradedStatus
+from domain.quant.models import QuantScoreBundle
 from pipelines.ingestion.models import FreshnessStatus
 
 
@@ -87,6 +88,16 @@ class MacroRegime(BaseModel, extra="forbid"):
     freshness_status: FreshnessStatus = Field(default=FreshnessStatus.UNKNOWN)
     degraded_status: DegradedStatus = Field(default=DegradedStatus.UNKNOWN)
     missing_inputs: list[str] = Field(default_factory=list)
+
+    quant_scores: QuantScoreBundle | None = Field(
+        default=None,
+        description=(
+            "Quant Scoring Engine v1 output for this regime's supporting snapshot. "
+            "Present when the regime was built via MacroRegimeService (not bootstrap/seed). "
+            "Downstream consumers (signal confidence, conflict surface) should use this "
+            "to refine their outputs rather than relying solely on categorical states."
+        ),
+    )
 
     transition: RegimeTransition = Field(default_factory=RegimeTransition)
     rationale_summary: str = Field(default="")

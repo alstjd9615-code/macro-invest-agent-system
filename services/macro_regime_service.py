@@ -15,6 +15,7 @@ from domain.macro.regime_mapping import (
     map_snapshot_to_regime,
 )
 from domain.macro.regime_transition import derive_regime_transition
+from domain.quant.scoring import score_snapshot
 from services.interfaces import RegimeServiceInterface
 
 
@@ -35,7 +36,10 @@ class MacroRegimeService(RegimeServiceInterface):
             raise ValueError(f"No snapshot available on or before {as_of_date.isoformat()}")
 
         label, family = map_snapshot_to_regime(snapshot)
-        confidence = derive_regime_confidence(snapshot=snapshot, label=label)
+        quant_scores = score_snapshot(snapshot)
+        confidence = derive_regime_confidence(
+            snapshot=snapshot, label=label, quant_scores=quant_scores
+        )
         missing_inputs = derive_regime_missing_inputs(snapshot)
         return MacroRegime(
             as_of_date=snapshot.as_of_date,
@@ -53,6 +57,7 @@ class MacroRegimeService(RegimeServiceInterface):
             freshness_status=snapshot.freshness_status,
             degraded_status=snapshot.degraded_status,
             missing_inputs=missing_inputs,
+            quant_scores=quant_scores,
             rationale_summary=build_regime_rationale(snapshot=snapshot, label=label),
             warnings=derive_regime_warnings(
                 snapshot=snapshot,

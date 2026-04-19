@@ -8,7 +8,8 @@ from core.metrics import SIGNAL_GENERATION_DURATION
 from core.tracing import get_tracer
 from core.tracing.span_attributes import SIGNAL_COUNT
 from domain.macro.models import MacroSnapshot
-from domain.macro.regime import MacroRegime
+from domain.macro.regime import MacroRegime, RegimeConfidence
+from domain.signals.conflict import derive_conflict
 from domain.signals.engine import SignalEngine
 from domain.signals.models import SignalDefinition, SignalOutput, SignalResult
 from domain.signals.regime_signal_rules import get_regime_signal_rules
@@ -16,6 +17,39 @@ from services.interfaces import SignalServiceInterface
 
 _log = get_logger(__name__)
 _tracer = get_tracer(__name__)
+
+
+def _adjust_signal_score(
+    base_score: float,
+    regime_confidence: RegimeConfidence,
+    quant_overall_support: float | None,
+) -> float:
+    """Adjust a rule-level signal score using regime confidence and quant support.
+
+    Adjustment rules
+    ----------------
+    1. Apply a regime-confidence multiplier first:
+       - HIGH   → 1.00 (unchanged)
+       - MEDIUM → 0.85 (mild reduction)
+       - LOW    → 0.65 (significant reduction)
+    2. If quant overall_support is available and very weak (<0.35), apply an
+       additional 0.85 multiplier to reflect poor quantitative backing.
+    3. Result is clamped to [0.0, 1.0].
+
+    Note: this function never raises the base_score above its rule-level value.
+    Score inflation is not the goal; calibrated reduction is.
+    """
+    confidence_multipliers: dict[RegimeConfidence, float] = {
+        RegimeConfidence.HIGH: 1.00,
+        RegimeConfidence.MEDIUM: 0.85,
+        RegimeConfidence.LOW: 0.65,
+    }
+    score = base_score * confidence_multipliers.get(regime_confidence, 1.0)
+
+    if quant_overall_support is not None and quant_overall_support < 0.35:
+        score *= 0.85
+
+    return max(0.0, min(1.0, score))
 
 class SignalService(SignalServiceInterface):
     """Skeleton implementation of signal service.
@@ -179,13 +213,28 @@ class SignalService(SignalServiceInterface):
             )
 
         # --- Build signals ---------------------------------------------------
+        quant_overall_support = (
+            regime.quant_scores.overall_support if regime.quant_scores is not None else None
+        )
+
         signals: list[SignalOutput] = []
         for rule in rules:
+            adjusted_score = _adjust_signal_score(
+                base_score=rule.signal_confidence,
+                regime_confidence=regime.confidence,
+                quant_overall_support=quant_overall_support,
+            )
+            conflict_surface = derive_conflict(
+                supporting_drivers=list(rule.supporting_drivers),
+                conflicting_drivers=list(rule.conflicting_drivers),
+                quant_overall_support=quant_overall_support,
+                is_degraded=regime_is_degraded,
+            )
             signal_out = SignalOutput(
                 signal_id=rule.signal_id,
                 signal_type=rule.signal_direction,
                 strength=rule.signal_strength,
-                score=rule.signal_confidence,
+                score=adjusted_score,
                 triggered_at=now,
                 trend=rule.trend,
                 rationale=rule.regime_rationale,
@@ -196,6 +245,7 @@ class SignalService(SignalServiceInterface):
                 conflicting_drivers=list(rule.conflicting_drivers),
                 is_degraded=regime_is_degraded,
                 caveat=caveat,
+                conflict=conflict_surface,
             )
             signals.append(signal_out)
 
