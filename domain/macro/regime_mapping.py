@@ -183,10 +183,9 @@ def derive_regime_confidence(
 
     # --- Quant score adjustment (Chunk 2 addition) ---
     if quant_scores is not None and confidence != RegimeConfidence.LOW:
-        if quant_scores.breadth < 0.60:
+        if quant_scores.breadth < 0.60 and confidence == RegimeConfidence.HIGH:
             # Insufficient dimension coverage — cannot support HIGH confidence
-            if confidence == RegimeConfidence.HIGH:
-                confidence = RegimeConfidence.MEDIUM
+            confidence = RegimeConfidence.MEDIUM
         if quant_scores.overall_support < 0.40:
             # Weak quant support — downgrade one level
             if confidence == RegimeConfidence.HIGH:

@@ -24,7 +24,7 @@ from domain.macro.snapshot import (
     MacroSnapshotState,
     PolicyState,
 )
-from domain.quant.models import QuantScoreBundle, ScoreDimension, DimensionScore, ScoreLevel
+from domain.quant.models import QuantScoreBundle
 from domain.quant.scoring import score_snapshot
 from pipelines.ingestion.models import FreshnessStatus
 from services.signal_service import _adjust_signal_score
@@ -252,10 +252,9 @@ class TestSignalScoreAdjustmentInService:
     """Verify that adjusted scores are lower for degraded/low-confidence regimes."""
 
     async def test_low_confidence_regime_lowers_signal_scores(self) -> None:
-        from services.signal_service import SignalService
-        from domain.macro.regime import RegimeTransition, RegimeTransitionType
         from domain.macro.snapshot import DegradedStatus
         from pipelines.ingestion.models import FreshnessStatus
+        from services.signal_service import SignalService
 
         svc = SignalService()
 

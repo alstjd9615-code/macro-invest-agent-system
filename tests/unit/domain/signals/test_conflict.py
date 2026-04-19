@@ -12,9 +12,8 @@ from domain.signals.conflict import (
     _quant_support_label,
     derive_conflict,
 )
+from domain.signals.enums import SignalStrength, SignalType
 from domain.signals.models import SignalOutput
-from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-
 
 # ---------------------------------------------------------------------------
 # ConflictSurface model
@@ -308,18 +307,18 @@ class TestDTOBuilderConflictFields:
 @pytest.mark.asyncio
 class TestConflictSurfaceInRegimeEngine:
     async def test_goldilocks_signals_have_conflict_populated(self) -> None:
-        from services.signal_service import SignalService
-        from domain.macro.regime import MacroRegime, RegimeFamily
+        from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeFamily, RegimeLabel
         from domain.macro.snapshot import DegradedStatus
         from pipelines.ingestion.models import FreshnessStatus
+        from services.signal_service import SignalService
 
         svc = SignalService()
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
-            regime_label="goldilocks",
+            regime_label=RegimeLabel.GOLDILOCKS,
             regime_family=RegimeFamily.EXPANSION,
             supporting_snapshot_id="snap-1",
-            confidence="high",
+            confidence=RegimeConfidence.HIGH,
             freshness_status=FreshnessStatus.FRESH,
             degraded_status=DegradedStatus.NONE,
         )
@@ -331,18 +330,18 @@ class TestConflictSurfaceInRegimeEngine:
 
     async def test_goldilocks_signals_are_mostly_clean_or_tension(self) -> None:
         """Goldilocks is a coherent regime — most signals should not be 'mixed'."""
-        from services.signal_service import SignalService
-        from domain.macro.regime import MacroRegime, RegimeFamily
+        from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeFamily, RegimeLabel
         from domain.macro.snapshot import DegradedStatus
         from pipelines.ingestion.models import FreshnessStatus
+        from services.signal_service import SignalService
 
         svc = SignalService()
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
-            regime_label="goldilocks",
+            regime_label=RegimeLabel.GOLDILOCKS,
             regime_family=RegimeFamily.EXPANSION,
             supporting_snapshot_id="snap-1",
-            confidence="high",
+            confidence=RegimeConfidence.HIGH,
             freshness_status=FreshnessStatus.FRESH,
             degraded_status=DegradedStatus.NONE,
         )
@@ -358,10 +357,10 @@ class TestConflictSurfaceInRegimeEngine:
 
     async def test_conflict_is_none_in_fallback_engine_path(self) -> None:
         """Legacy snapshot-based engine does not produce conflict surface."""
-        from services.signal_service import SignalService
         from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
         from domain.macro.models import MacroFeature, MacroSnapshot
         from domain.signals.models import SignalDefinition, SignalRule
+        from services.signal_service import SignalService
 
         svc = SignalService()
         snap = MacroSnapshot(
@@ -400,10 +399,12 @@ class TestConflictSurfaceInRegimeEngine:
 class TestSignalsAPIConflictFields:
     def test_regime_grounded_response_has_conflict_fields(self) -> None:
         from unittest.mock import AsyncMock, MagicMock
+
         from fastapi.testclient import TestClient
+
         from apps.api.dependencies import get_regime_service, get_signal_service
         from apps.api.main import app
-        from domain.macro.regime import MacroRegime, RegimeFamily
+        from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeFamily, RegimeLabel
         from domain.macro.snapshot import DegradedStatus
         from pipelines.ingestion.models import FreshnessStatus
         from services.signal_service import SignalService
@@ -411,10 +412,10 @@ class TestSignalsAPIConflictFields:
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
-            regime_label="goldilocks",
+            regime_label=RegimeLabel.GOLDILOCKS,
             regime_family=RegimeFamily.EXPANSION,
             supporting_snapshot_id="snap-1",
-            confidence="high",
+            confidence=RegimeConfidence.HIGH,
             freshness_status=FreshnessStatus.FRESH,
             degraded_status=DegradedStatus.NONE,
         )
