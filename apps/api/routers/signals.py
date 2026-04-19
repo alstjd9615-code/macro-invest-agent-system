@@ -82,6 +82,15 @@ async def get_latest_signals(
         signals_dtos = [signal_output_to_dto(s) for s in result.signals]
         trust = build_trust_from_signal_result(result)
 
+        # Determine response status based on regime state
+        any_degraded = any(s.is_degraded for s in result.signals)
+        if any_degraded:
+            response_status = "degraded"
+        elif not signals_dtos:
+            response_status = "empty"
+        else:
+            response_status = "success"
+
         for signal in result.signals:
             signal_rationale_points = [
                 f"Regime: {regime.regime_label.value} ({regime.regime_family.value})",
@@ -99,6 +108,8 @@ async def get_latest_signals(
                 signal_rationale_points.append(
                     f"Conflicting drivers: {', '.join(signal.conflicting_drivers)}"
                 )
+            if signal.caveat:
+                signal_rationale_points.append(f"Caveat: {signal.caveat}")
             build_and_register_explanation(
                 run_id=result.run_id,
                 signal_id=signal.signal_id,
@@ -131,6 +142,10 @@ async def get_latest_signals(
             hold_count=hold_count,
             strongest_signal_id=strongest_id,
             trust=trust,
+            regime_label=regime.regime_label.value,
+            as_of_date=regime.as_of_date.isoformat(),
+            is_regime_grounded=True,
+            status=response_status,
         )
 
     # --- Fallback: experimental snapshot-based engine ---
@@ -167,6 +182,8 @@ async def get_latest_signals(
                 availability=DataAvailability.UNAVAILABLE,
                 is_degraded=True,
             ),
+            is_regime_grounded=False,
+            status="empty",
         )
 
     try:
@@ -236,4 +253,6 @@ async def get_latest_signals(
         hold_count=hold_count,
         strongest_signal_id=strongest_id,
         trust=trust,
+        is_regime_grounded=False,
+        status="fallback",
     )

@@ -11,6 +11,9 @@ Design notes
 * :class:`SignalsLatestResponse` bundles signals with aggregate counts and
   trust metadata.
 * The ``strongest_signal`` convenience field reduces client-side max lookup.
+* ``is_degraded`` and ``caveat`` are surfaced at both the individual signal
+  level and on the response envelope so consumers can render badges at
+  either granularity.
 """
 
 from __future__ import annotations
@@ -40,6 +43,10 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
         supporting_regime: Regime label that grounds this signal.
         supporting_drivers: Macro factors supporting this signal direction.
         conflicting_drivers: Macro factors that reduce signal confidence.
+        is_degraded: True when the signal was derived from a degraded/stale/
+            low-confidence regime.  Consumers should render a degraded badge.
+        caveat: Analyst-facing explanation of why the signal is degraded, or
+            ``None`` when ``is_degraded`` is ``False``.
     """
 
     signal_id: str = Field(..., description="Unique signal identifier")
@@ -70,6 +77,20 @@ class SignalSummaryDTO(BaseModel, extra="forbid"):
         default_factory=list,
         description="Macro factors that reduce signal confidence",
     )
+    is_degraded: bool = Field(
+        default=False,
+        description=(
+            "True when this signal was derived from a degraded, stale, or low-confidence "
+            "regime.  Consumers should render a degraded badge and apply extra caution."
+        ),
+    )
+    caveat: str | None = Field(
+        default=None,
+        description=(
+            "Analyst-facing caveat explaining why this signal is degraded. "
+            "None when is_degraded=False."
+        ),
+    )
 
 
 class SignalsLatestResponse(BaseModel, extra="forbid"):
@@ -86,6 +107,17 @@ class SignalsLatestResponse(BaseModel, extra="forbid"):
         strongest_signal_id: ID of the highest-scoring signal; ``None`` if no
             signals.
         trust: Trust and freshness metadata for UI badge rendering.
+        regime_label: Regime label that grounded this signal run; ``None`` when
+            signals were derived via the fallback snapshot-based path.
+        as_of_date: ISO date string of the regime or snapshot this run was
+            grounded in; ``None`` when unavailable.
+        is_regime_grounded: True when signals were derived from a persisted
+            regime.  False when using the fallback snapshot-based engine.
+        status: Product-surface state of this response. One of:
+            ``'success'`` — healthy regime-grounded signals;
+            ``'degraded'`` — regime-grounded but regime is degraded/stale/low-conf;
+            ``'fallback'`` — no persisted regime, snapshot-based fallback used;
+            ``'empty'`` — no signals generated.
     """
 
     country: str = Field(..., description="Country code for this signal run")
@@ -103,4 +135,36 @@ class SignalsLatestResponse(BaseModel, extra="forbid"):
     )
     trust: TrustMetadata = Field(
         default_factory=TrustMetadata, description="Trust and freshness metadata"
+    )
+    regime_label: str | None = Field(
+        default=None,
+        description=(
+            "Regime label that grounded this signal run. "
+            "None when the fallback snapshot-based engine was used."
+        ),
+    )
+    as_of_date: str | None = Field(
+        default=None,
+        description=(
+            "ISO date string (YYYY-MM-DD) of the regime or snapshot this run was "
+            "grounded in.  None when unavailable."
+        ),
+    )
+    is_regime_grounded: bool = Field(
+        default=False,
+        description=(
+            "True when signals were derived from a persisted macro regime. "
+            "False when using the fallback snapshot-based engine."
+        ),
+    )
+    status: str = Field(
+        default="success",
+        description=(
+            "Product-surface state of this signal response. "
+            "One of: 'success', 'degraded', 'fallback', 'empty'. "
+            "'success' = healthy regime-grounded signals; "
+            "'degraded' = regime-grounded but regime is degraded/stale/low-confidence; "
+            "'fallback' = no persisted regime, snapshot-based fallback used; "
+            "'empty' = no signals generated."
+        ),
     )

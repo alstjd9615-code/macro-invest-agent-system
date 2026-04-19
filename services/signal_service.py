@@ -101,16 +101,84 @@ class SignalService(SignalServiceInterface):
         regime label.  Each signal is grounded in the regime with an
         analyst-facing rationale and structured driver lists.
 
+        Degraded propagation
+        --------------------
+        When the grounding regime is degraded, stale, or low-confidence, each
+        generated signal receives ``is_degraded=True`` and a ``caveat`` string
+        that explains the specific condition.  This lets the API and UI surface
+        degraded badges without re-inspecting the regime directly.
+
         Args:
             regime: The current :class:`~domain.macro.regime.MacroRegime`.
 
         Returns:
             :class:`~domain.signals.models.SignalResult` with all regime-derived signals.
         """
+        from domain.macro.regime import RegimeConfidence, RegimeLabel
+        from domain.macro.snapshot import DegradedStatus
+        from pipelines.ingestion.models import FreshnessStatus
+
         run_id = str(uuid.uuid4())
         rules = get_regime_signal_rules(regime.regime_label)
         now = datetime.now(UTC)
 
+        # --- Derive regime-level degraded state and caveat -------------------
+        is_seeded = regime.metadata.get("seeded") == "true"
+        regime_is_degraded = (
+            is_seeded
+            or regime.freshness_status in {FreshnessStatus.STALE, FreshnessStatus.UNKNOWN}
+            or regime.degraded_status
+            in {
+                DegradedStatus.PARTIAL,
+                DegradedStatus.MISSING,
+                DegradedStatus.SOURCE_UNAVAILABLE,
+            }
+            or regime.confidence == RegimeConfidence.LOW
+            or regime.regime_label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}
+        )
+
+        caveat: str | None = None
+        if is_seeded:
+            caveat = (
+                "Signal derived from bootstrap/synthetic regime data. "
+                "This is not a production signal."
+            )
+        elif regime.regime_label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
+            caveat = (
+                f"Grounding regime is non-directional ({regime.regime_label.value}). "
+                "No asset-level signal can be derived with meaningful confidence."
+            )
+        elif regime.freshness_status == FreshnessStatus.STALE:
+            caveat = (
+                f"Grounding regime is stale (freshness={regime.freshness_status.value}). "
+                "Signal may not reflect current market conditions."
+            )
+        elif regime.freshness_status == FreshnessStatus.UNKNOWN:
+            caveat = (
+                "Regime data freshness is unknown. "
+                "Signal confidence is reduced."
+            )
+        elif regime.degraded_status in {
+            DegradedStatus.MISSING,
+            DegradedStatus.SOURCE_UNAVAILABLE,
+        }:
+            caveat = (
+                f"Grounding regime has degraded inputs "
+                f"(status={regime.degraded_status.value}). "
+                "Signal derived from incomplete macro evidence."
+            )
+        elif regime.degraded_status == DegradedStatus.PARTIAL:
+            caveat = (
+                "Grounding regime was built from partial indicator data. "
+                "Signal confidence may be lower than stated."
+            )
+        elif regime.confidence == RegimeConfidence.LOW:
+            caveat = (
+                "Grounding regime confidence is LOW. "
+                "Signal direction is indicative only — do not act with high conviction."
+            )
+
+        # --- Build signals ---------------------------------------------------
         signals: list[SignalOutput] = []
         for rule in rules:
             signal_out = SignalOutput(
@@ -126,6 +194,8 @@ class SignalService(SignalServiceInterface):
                 supporting_regime=rule.supporting_regime,
                 supporting_drivers=list(rule.supporting_drivers),
                 conflicting_drivers=list(rule.conflicting_drivers),
+                is_degraded=regime_is_degraded,
+                caveat=caveat,
             )
             signals.append(signal_out)
 
@@ -133,6 +203,7 @@ class SignalService(SignalServiceInterface):
             "regime_grounded_engine_complete",
             regime_label=regime.regime_label.value,
             signals_generated=len(signals),
+            is_degraded=regime_is_degraded,
         )
         from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
         from domain.macro.models import MacroFeature, MacroSnapshot

@@ -107,6 +107,21 @@ class SignalOutput(BaseModel):
             "(e.g. 'policy_restrictive', 'labor_weakening')."
         ),
     )
+    is_degraded: bool = Field(
+        default=False,
+        description=(
+            "True when this signal was derived from a degraded, stale, or low-confidence "
+            "regime.  Downstream consumers should render a degraded badge and interpret "
+            "the signal with increased caution."
+        ),
+    )
+    caveat: str | None = Field(
+        default=None,
+        description=(
+            "Analyst-facing caveat string explaining why this signal is degraded or should "
+            "be interpreted with reduced confidence.  None when is_degraded=False."
+        ),
+    )
 
 
 class SignalResult(BaseModel):

@@ -180,4 +180,6 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
         supporting_regime=signal.supporting_regime,
         supporting_drivers=list(signal.supporting_drivers),
         conflicting_drivers=list(signal.conflicting_drivers),
+        is_degraded=signal.is_degraded,
+        caveat=signal.caveat,
     )
