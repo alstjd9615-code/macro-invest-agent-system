@@ -23,6 +23,7 @@ from functools import lru_cache
 
 from fastapi import Depends
 
+from adapters.repositories.in_memory_explanation_store import InMemoryExplanationStore
 from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
 from services.interfaces import (
@@ -33,6 +34,7 @@ from services.interfaces import (
 from services.macro_regime_service import MacroRegimeService
 from services.macro_service import MacroService
 from services.signal_service import SignalService
+from storage.repositories.explanation_repository import ExplanationRepositoryInterface
 
 
 @lru_cache(maxsize=1)
@@ -72,6 +74,17 @@ def _regime_service_singleton() -> MacroRegimeService:
     )
 
 
+@lru_cache(maxsize=1)
+def _explanation_store_singleton() -> InMemoryExplanationStore:
+    """Return the shared in-memory explanation store.
+
+    This singleton is shared between the explanations router and the signals
+    router so that explanations registered during a signal run can be
+    retrieved via ``GET /api/explanations/{id}``.
+    """
+    return InMemoryExplanationStore()
+
+
 def get_macro_service() -> MacroServiceInterface:
     """FastAPI dependency: provide the macro data service.
 
@@ -95,11 +108,27 @@ def get_regime_service() -> RegimeServiceInterface:
     return _regime_service_singleton()
 
 
+def get_explanation_repository() -> ExplanationRepositoryInterface:
+    """FastAPI dependency: provide the shared explanation repository.
+
+    Returns the :class:`~adapters.repositories.in_memory_explanation_store.InMemoryExplanationStore`
+    singleton.  Override in tests with::
+
+        app.dependency_overrides[get_explanation_repository] = lambda: my_test_store
+
+    The same store instance is used by both the explanations router and the
+    signals router, ensuring that explanations registered during a signal run
+    are immediately retrievable via the explanations API.
+    """
+    return _explanation_store_singleton()
+
+
 # Re-export for convenience
 __all__ = [
     "get_macro_service",
     "get_signal_service",
     "get_regime_service",
+    "get_explanation_repository",
     "get_snapshot_store",
     "Depends",
 ]

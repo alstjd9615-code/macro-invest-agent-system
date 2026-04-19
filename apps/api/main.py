@@ -10,6 +10,7 @@ Exposes:
 - ``GET /api/regimes/latest``              — latest persisted macro regime (analyst read).
 - ``GET /api/regimes/compare``             — current-vs-prior regime transition (analyst read).
 - ``GET /api/explanations/regime/latest``  — analyst narrative for current regime.
+- ``GET /api/explanations/run/{run_id}``   — all explanations for a run.
 - ``GET /api/explanations/{id}``           — explanation by ID.
 - ``GET /api/sessions/{id}``               — session context by ID (analyst read).
 
