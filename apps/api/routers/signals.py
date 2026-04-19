@@ -168,6 +168,9 @@ async def get_latest_signals(
         definitions = [registry.get(sid) for sid in registry.list_ids()]
 
     if not definitions:
+        # No signal definitions registered — the registry itself is empty.
+        # This is distinct from a successful fallback run that produced zero signals,
+        # so "empty" is the correct status rather than "fallback".
         return SignalsLatestResponse(
             country=country,
             run_id="",

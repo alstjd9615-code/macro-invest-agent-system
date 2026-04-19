@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi.testclient import TestClient
 
+from apps.api.dependencies import get_macro_service, get_regime_service, get_signal_service
+from apps.api.dto.builders import signal_output_to_dto
+from apps.api.main import app
+from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
+from domain.macro.models import MacroFeature, MacroSnapshot
 from domain.macro.regime import (
     MacroRegime,
     RegimeConfidence,
@@ -15,7 +23,8 @@ from domain.macro.regime import (
     RegimeTransitionType,
 )
 from domain.macro.snapshot import DegradedStatus
-from domain.signals.models import SignalOutput
+from domain.signals.enums import SignalStrength, SignalType, TrendDirection
+from domain.signals.models import SignalOutput, SignalResult
 from pipelines.ingestion.models import FreshnessStatus
 from services.signal_service import SignalService
 
@@ -180,7 +189,6 @@ class TestSignalDegradedPropagation:
 
     async def test_result_has_correct_run_id_format(self) -> None:
         """run_id should be a UUID string."""
-        import re
         svc = SignalService()
         regime = _regime(RegimeLabel.GOLDILOCKS, RegimeFamily.EXPANSION)
         result = await svc.run_regime_grounded_engine(regime)
@@ -194,8 +202,6 @@ class TestSignalOutputDegradedFields:
     """Unit tests for is_degraded/caveat fields on SignalOutput domain model."""
 
     def test_signal_output_defaults_is_degraded_false(self) -> None:
-        from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-
         sig = SignalOutput(
             signal_id="test_sig",
             signal_type=SignalType.BUY,
@@ -208,8 +214,6 @@ class TestSignalOutputDegradedFields:
         assert sig.caveat is None
 
     def test_signal_output_accepts_degraded_flag(self) -> None:
-        from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-
         sig = SignalOutput(
             signal_id="test_sig_degraded",
             signal_type=SignalType.HOLD,
@@ -229,12 +233,6 @@ class TestSignalSummaryDTODegradedFields:
     """Verify is_degraded and caveat are passed through the DTO builder."""
 
     def test_dto_builder_passes_through_degraded_fields(self) -> None:
-        from datetime import UTC
-
-        from apps.api.dto.builders import signal_output_to_dto
-        from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-        from domain.signals.models import SignalOutput
-
         sig = SignalOutput(
             signal_id="degraded_sig",
             signal_type=SignalType.HOLD,
@@ -250,12 +248,6 @@ class TestSignalSummaryDTODegradedFields:
         assert dto.caveat == "Bootstrap data — synthetic signal only."
 
     def test_dto_builder_passes_through_non_degraded(self) -> None:
-        from datetime import UTC
-
-        from apps.api.dto.builders import signal_output_to_dto
-        from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-        from domain.signals.models import SignalOutput
-
         sig = SignalOutput(
             signal_id="clean_sig",
             signal_type=SignalType.BUY,
@@ -273,21 +265,6 @@ class TestSignalsLatestRouterDegradedPropagation:
     """Integration-level tests: signals router surfaces degraded state correctly."""
 
     def test_signals_response_has_regime_grounded_fields(self) -> None:
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_regime_service, get_signal_service
-        from apps.api.main import app
-        from domain.macro.regime import (
-            MacroRegime,
-            RegimeConfidence,
-            RegimeFamily,
-            RegimeLabel,
-        )
-        from domain.macro.snapshot import DegradedStatus
-        from pipelines.ingestion.models import FreshnessStatus
-
         regime = MacroRegime(
             as_of_date=date(2026, 4, 1),
             regime_timestamp=datetime(2026, 4, 1, tzinfo=UTC),
@@ -321,21 +298,6 @@ class TestSignalsLatestRouterDegradedPropagation:
             app.dependency_overrides.clear()
 
     def test_signals_fallback_has_correct_status(self) -> None:
-        from unittest.mock import AsyncMock, MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import (
-            get_macro_service,
-            get_regime_service,
-            get_signal_service,
-        )
-        from apps.api.main import app
-        from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
-        from domain.macro.models import MacroFeature, MacroSnapshot
-        from domain.signals.enums import SignalStrength, SignalType, TrendDirection
-        from domain.signals.models import SignalOutput, SignalResult
-
         now = datetime(2026, 4, 1, tzinfo=UTC)
         snapshot = MacroSnapshot(
             features=[
