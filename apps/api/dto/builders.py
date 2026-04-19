@@ -214,7 +214,7 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
 _STATE_LABELS: dict[str, str] = {
     "growth_state": "Growth",
     "inflation_state": "Inflation",
-    "labor_state": "Labour",
+    "labor_state": "Labor",
     "policy_state": "Policy",
     "financial_conditions_state": "Financial Conditions",
 }
@@ -251,9 +251,9 @@ def build_reasoning_chain(
 
     # Step 1 — current_state
     state_parts = [
-        f"{human_label}: {narrative['regime_context'].get(state_key, 'unknown')}"
+        f"{human_label}: {ctx.get(state_key, 'unknown')}"
         for state_key, human_label in _STATE_LABELS.items()
-        if state_key in narrative["regime_context"]
+        if state_key in ctx
     ]
     # Fall back to the rationale_points state lines when context doesn't carry states
     if not state_parts:

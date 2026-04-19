@@ -75,7 +75,7 @@ def render_explanation_panel(explanation_data: dict[str, object]) -> None:
                 st.markdown(f"{icon} **{label}**")
                 st.markdown(f"`{value}`")
                 if detail:
-                    with st.expander("detail", expanded=False):
+                    with st.expander("Detail", expanded=False):
                         st.caption(detail)
         st.markdown("")
 
