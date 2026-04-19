@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-import pytest
-
 from apps.api.dto.builders import (
     build_analyst_workflow,
     build_reasoning_chain,

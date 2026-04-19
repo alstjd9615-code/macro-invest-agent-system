@@ -12,6 +12,8 @@ to preserve the degraded-vs-conflicted semantic distinction.
 
 from __future__ import annotations
 
+from typing import Any
+
 import streamlit as st
 
 from apps.workbench.components.conflict_badge import render_conflict_badge
@@ -32,7 +34,7 @@ _STEP_ICONS: dict[str, str] = {
 _DEFAULT_ICON = "•"
 
 
-def render_explanation_panel(explanation_data: dict[str, object]) -> None:
+def render_explanation_panel(explanation_data: dict[str, Any]) -> None:
     """Render the structured explanation panel from an :class:`ExplanationResponse` dict.
 
     Renders:
@@ -93,7 +95,7 @@ def render_explanation_panel(explanation_data: dict[str, object]) -> None:
         )
 
     # ---- Caveats ----
-    caveats: list[str] = list(explanation_data.get("caveats") or [])  # type: ignore[arg-type]
+    caveats: list[str] = list(explanation_data.get("caveats") or [])
     if caveats:
         st.markdown("---")
         st.markdown("**⚠️ Interpretation Caveats**")
@@ -101,7 +103,7 @@ def render_explanation_panel(explanation_data: dict[str, object]) -> None:
             st.warning(caveat)
 
     # ---- Data quality notes ----
-    dq_notes: list[str] = list(explanation_data.get("data_quality_notes") or [])  # type: ignore[arg-type]
+    dq_notes: list[str] = list(explanation_data.get("data_quality_notes") or [])
     if dq_notes:
         st.markdown("---")
         st.markdown("**🔬 Data Quality Notes**")
@@ -109,7 +111,7 @@ def render_explanation_panel(explanation_data: dict[str, object]) -> None:
             st.info(note)
 
     # ---- Rationale bullet points (collapsible) ----
-    rationale_points: list[str] = list(explanation_data.get("rationale_points") or [])  # type: ignore[arg-type]
+    rationale_points: list[str] = list(explanation_data.get("rationale_points") or [])
     if rationale_points:
         with st.expander("📋 Full Rationale", expanded=False):
             for point in rationale_points:
