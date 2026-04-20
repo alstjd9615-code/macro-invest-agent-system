@@ -109,6 +109,98 @@ Phase details should be refined in backlog tasks, not duplicated in README.
 
 ---
 
+## Chapter Roadmap (Chapters 6–12)
+
+### Chapter 6 — Alerting & Monitoring Intelligence ✅ (complete)
+
+Turns change detection into proactive analyst notification.
+
+- Configurable alert-rule engine over `RegimeDelta` results and regime transitions
+- Alert types: `threshold_breach`, `regime_transition`, `signal_reversal`,
+  `staleness_warning`, `trust_degradation`
+- Structured `AlertEvent` records with `trigger_type`, `severity`,
+  `source_regime`, `target_regime`, `indicator_type`, `context_snapshot_id`
+- Alert history store queryable by type, severity, country, and time range
+- Read-only alert API: `GET /api/alerts/recent`, `GET /api/alerts/{id}`
+- Analyst-facing acknowledgement/snooze: `PATCH /api/alerts/{id}/acknowledge`,
+  `PATCH /api/alerts/{id}/snooze`
+
+### Chapter 7 — External Event & Catalyst Intelligence (Ingestion Layer)
+
+Introduces the external event ingestion layer with normalized, structured
+event facts distinct from raw news aggregation.
+
+- `ExternalEvent` domain model: `event_type`, `source`, `occurred_at`,
+  `normalized_at`, `raw_payload_ref`, `structured_fields`
+- Ingestion adapters for structured sources: economic release calendars
+  (FRED release dates, Fed announcement schedules)
+- Normalization layer that maps raw structured data into typed `ExternalEvent`
+  records — explicitly distinct from interpretation or impact
+- Event freshness and source attribution tracked consistently with macro
+  indicator tracking
+- Read API: `GET /api/events/recent`, `GET /api/events/{id}`
+
+### Chapter 8 — Catalyst-Aware Interpretation
+
+Attributes observed `FeatureDelta` records to candidate external event causes
+using deterministic, rule-based matching.
+
+- `AttributionRule` domain model: `(event_type, indicator_type, max_lag_days)`
+- `ChangeAttribution` read model with `confidence` enum:
+  `high` / `medium` / `low` / `unattributed`
+- Advisory attribution adds context to explanations; does not override
+  deterministic regime computation
+- `catalyst_context` block added to explanation DTOs
+
+### Chapter 9 — Fundamental Intelligence Layer
+
+Introduces sector-level fundamental data distinct from macro indicators,
+bridging macro signals to investment-relevant fundamentals.
+
+- `FundamentalFact` domain model: `fact_type`, `value`, `period`, `source`,
+  `observed_at`
+- Sector-level aggregate views (S&P 500 sector earnings growth, consensus
+  revision direction)
+- Fundamentals ingestion pipeline separate from macro ingestion
+- `FundamentalSnapshot` read model per sector per period
+- Read API: `GET /api/fundamentals/sectors/latest`,
+  `GET /api/fundamentals/{ticker}/latest`
+
+### Chapter 10 — Scenario / What-If Engine
+
+Deterministic parameterised exploration of the existing analytical model —
+not speculative forecasting.
+
+- `ScenarioSpec` model: named indicator overrides applied to a base snapshot
+- `ScenarioResult` read model: derived regime label, signal outputs,
+  conflict state, delta-vs-baseline
+- Historical scenario lookup: "find periods where indicator X was in range Y"
+- Explicit `is_hypothetical=True` labelling throughout the DTO chain
+
+### Chapter 11 — Portfolio & Allocation Intelligence
+
+Bridges macro signals to structured allocation guidance.
+
+- `RegimeAllocationMatrix`: regime label → asset class positioning ranges
+- `PortfolioOverlay` read model with signal alignment score
+- Conflict/divergence surface: flags where current signals diverge from the
+  historical matrix
+- Read API: `GET /api/portfolio/overlay/latest`
+
+### Chapter 12 — LLM-Assisted Narrative / Research Copilot
+
+LLM-assisted communication of the structured analytical backbone — the
+copilot summarises what the platform knows, it does not invent.
+
+- `NarrativeRequest` schema grounded on specific snapshot/run/scenario IDs
+- `NarrativeDraft` output with source-referenced sections
+- Every LLM sentence traceable to a structured fact; non-groundable claims
+  suppressed or marked `uncertain`
+- Multi-turn analyst dialog resolved against the same grounded fact set
+- Explicit separation of LLM narrative from deterministic computation
+
+---
+
 ## Known Limitations / Deferred Work
 
 These items are intentionally out of scope for the current v1 delivery and
