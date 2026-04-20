@@ -23,7 +23,12 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from apps.api.dependencies import get_macro_service, get_regime_service, get_signal_service
+from apps.api.dependencies import (
+    get_explanation_repository,
+    get_macro_service,
+    get_regime_service,
+    get_signal_service,
+)
 from apps.api.dto.builders import build_trust_from_signal_result, signal_output_to_dto
 from apps.api.dto.signals import SignalsLatestResponse
 from apps.api.dto.trust import DataAvailability, FreshnessStatus, TrustMetadata
@@ -35,6 +40,7 @@ from services.interfaces import (
     SignalServiceInterface,
 )
 from services.signal_service import SignalService
+from storage.repositories.explanation_repository import ExplanationRepositoryInterface
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
 
@@ -64,6 +70,7 @@ async def get_latest_signals(
     macro_service: MacroServiceInterface = Depends(get_macro_service),
     signal_service: SignalServiceInterface = Depends(get_signal_service),
     regime_service: RegimeServiceInterface = Depends(get_regime_service),
+    explanation_repository: ExplanationRepositoryInterface = Depends(get_explanation_repository),
 ) -> SignalsLatestResponse:
     """Return latest regime-grounded signals for *country*.
 
@@ -110,11 +117,22 @@ async def get_latest_signals(
                 )
             if signal.caveat:
                 signal_rationale_points.append(f"Caveat: {signal.caveat}")
+
+            # Propagate conflict surface fields if available
+            sig_conflict_status = "clean"
+            sig_conflict_note = None
+            sig_quant_support = "unknown"
+            if signal.conflict is not None:
+                sig_conflict_status = signal.conflict.conflict_status.value
+                sig_conflict_note = signal.conflict.conflict_note
+                sig_quant_support = signal.conflict.quant_support_level
+
             build_and_register_explanation(
                 run_id=result.run_id,
                 signal_id=signal.signal_id,
                 summary=signal.rationale or f"Signal {signal.signal_id} evaluated successfully.",
                 rationale_points=signal_rationale_points,
+                repository=explanation_repository,
                 regime_label=regime.regime_label.value,
                 regime_context={
                     "label": regime.regime_label.value,
@@ -124,6 +142,9 @@ async def get_latest_signals(
                     "freshness": regime.freshness_status.value,
                     "degraded_status": regime.degraded_status.value,
                 },
+                conflict_status=sig_conflict_status,
+                conflict_note=sig_conflict_note,
+                quant_support_level=sig_quant_support,
             )
 
         strongest = result.strongest_signal()
@@ -231,6 +252,7 @@ async def get_latest_signals(
                 signal_id=signal.signal_id,
                 summary=signal.rationale or f"Signal {signal.signal_id} evaluated (degraded).",
                 rationale_points=rationale_points,
+                repository=explanation_repository,
             )
     else:
         build_and_register_explanation(
@@ -238,6 +260,7 @@ async def get_latest_signals(
             signal_id=None,
             summary=f"No signals generated for country={country}. No regime available.",
             rationale_points=["The signal engine completed with an empty result set (no regime)."],
+            repository=explanation_repository,
         )
 
     strongest = result.strongest_signal()
