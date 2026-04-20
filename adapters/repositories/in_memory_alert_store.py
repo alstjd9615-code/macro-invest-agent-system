@@ -18,7 +18,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from domain.alerts.models import AlertAcknowledgementState, AlertEvent, AlertSeverity, AlertTriggerType
+from domain.alerts.models import (
+    AlertAcknowledgementState,
+    AlertEvent,
+    AlertSeverity,
+    AlertTriggerType,
+)
 from storage.repositories.alert_repository import AlertRepositoryInterface
 
 

@@ -4,16 +4,14 @@ PATCH /api/alerts/{id}/acknowledge, PATCH /api/alerts/{id}/snooze.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
-import pytest
 from fastapi.testclient import TestClient
 
 from adapters.repositories.in_memory_alert_store import InMemoryAlertStore
 from apps.api.dependencies import get_alert_repository
 from apps.api.main import app
 from domain.alerts.models import (
-    AlertAcknowledgementState,
     AlertEvent,
     AlertSeverity,
     AlertTriggerType,

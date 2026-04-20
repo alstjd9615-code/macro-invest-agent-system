@@ -110,24 +110,24 @@ async def list_recent_alerts(
     if trigger_type is not None:
         try:
             parsed_trigger = AlertTriggerType(trigger_type)
-        except ValueError:
+        except ValueError as exc:
             raise HTTPException(
                 status_code=422,
                 detail=f"Invalid trigger_type '{trigger_type}'. "
                 f"Valid values: {[t.value for t in AlertTriggerType]}",
-            )
+            ) from exc
 
     # Validate and convert severity filter
     parsed_severity: AlertSeverity | None = None
     if severity is not None:
         try:
             parsed_severity = AlertSeverity(severity)
-        except ValueError:
+        except ValueError as exc:
             raise HTTPException(
                 status_code=422,
                 detail=f"Invalid severity '{severity}'. "
                 f"Valid values: {[s.value for s in AlertSeverity]}",
-            )
+            ) from exc
 
     alerts = alert_repo.list_recent(
         limit=limit,

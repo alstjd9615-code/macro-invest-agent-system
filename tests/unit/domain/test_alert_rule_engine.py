@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from domain.alerts.models import AlertSeverity, AlertTriggerType
 from domain.alerts.rule_engine import AlertRuleEngine
 from domain.alerts.rules import AlertRule
 from domain.macro.change_detection import RegimeDelta
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -53,42 +50,6 @@ def _delta(
     )
 
 
-def _regime_transition_rule(**kwargs: object) -> AlertRule:
-    return AlertRule(
-        rule_name="Test Regime Transition",
-        trigger_type=AlertTriggerType.REGIME_TRANSITION,
-        alert_severity=AlertSeverity.WARNING,
-        **kwargs,
-    )
-
-
-def _staleness_rule(**kwargs: object) -> AlertRule:
-    return AlertRule(
-        rule_name="Test Staleness",
-        trigger_type=AlertTriggerType.STALENESS_WARNING,
-        alert_severity=AlertSeverity.WARNING,
-        **kwargs,
-    )
-
-
-def _trust_rule(**kwargs: object) -> AlertRule:
-    return AlertRule(
-        rule_name="Test Trust Degradation",
-        trigger_type=AlertTriggerType.TRUST_DEGRADATION,
-        alert_severity=AlertSeverity.CRITICAL,
-        **kwargs,
-    )
-
-
-def _signal_reversal_rule(**kwargs: object) -> AlertRule:
-    return AlertRule(
-        rule_name="Test Signal Reversal",
-        trigger_type=AlertTriggerType.SIGNAL_REVERSAL,
-        alert_severity=AlertSeverity.WARNING,
-        **kwargs,
-    )
-
-
 # ---------------------------------------------------------------------------
 # Regime transition rules
 # ---------------------------------------------------------------------------
@@ -96,7 +57,12 @@ def _signal_reversal_rule(**kwargs: object) -> AlertRule:
 
 class TestRegimeTransitionRule:
     def test_fires_on_transition(self) -> None:
-        engine = AlertRuleEngine([_regime_transition_rule()])
+        rule = AlertRule(
+            rule_name="All transitions",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+        )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             label_changed=True,
             is_regime_transition=True,
@@ -113,14 +79,22 @@ class TestRegimeTransitionRule:
         assert events[0].target_regime == "contraction"
 
     def test_does_not_fire_without_transition(self) -> None:
-        engine = AlertRuleEngine([_regime_transition_rule()])
-        delta = _delta(is_regime_transition=False)
-        assert engine.evaluate(delta) == []
+        rule = AlertRule(
+            rule_name="All transitions",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+        )
+        engine = AlertRuleEngine([rule])
+        assert engine.evaluate(_delta(is_regime_transition=False)) == []
 
     def test_source_regime_filter_matches(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(source_regime="goldilocks")]
+        rule = AlertRule(
+            rule_name="From goldilocks",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            source_regime="goldilocks",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             severity="major",
@@ -131,9 +105,13 @@ class TestRegimeTransitionRule:
         assert len(engine.evaluate(delta)) == 1
 
     def test_source_regime_filter_blocks(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(source_regime="slowdown")]
+        rule = AlertRule(
+            rule_name="From slowdown",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            source_regime="slowdown",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             prior_label="goldilocks",
@@ -143,9 +121,13 @@ class TestRegimeTransitionRule:
         assert engine.evaluate(delta) == []
 
     def test_target_regime_filter_matches(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(target_regime="stagflation_risk")]
+        rule = AlertRule(
+            rule_name="To stagflation",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            target_regime="stagflation_risk",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             prior_label="goldilocks",
@@ -155,9 +137,13 @@ class TestRegimeTransitionRule:
         assert len(engine.evaluate(delta)) == 1
 
     def test_target_regime_filter_blocks(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(target_regime="stagflation_risk")]
+        rule = AlertRule(
+            rule_name="To stagflation",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            target_regime="stagflation_risk",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             prior_label="goldilocks",
@@ -167,9 +153,13 @@ class TestRegimeTransitionRule:
         assert engine.evaluate(delta) == []
 
     def test_min_change_severity_major_blocks_moderate(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(min_change_severity="major")]
+        rule = AlertRule(
+            rule_name="Major only",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            min_change_severity="major",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             severity="moderate",
@@ -180,9 +170,13 @@ class TestRegimeTransitionRule:
         assert engine.evaluate(delta) == []
 
     def test_min_change_severity_moderate_fires_on_major(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(min_change_severity="moderate")]
+        rule = AlertRule(
+            rule_name="Moderate and above",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            min_change_severity="moderate",
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(
             is_regime_transition=True,
             severity="major",
@@ -193,9 +187,13 @@ class TestRegimeTransitionRule:
         assert len(engine.evaluate(delta)) == 1
 
     def test_disabled_rule_does_not_fire(self) -> None:
-        engine = AlertRuleEngine(
-            [_regime_transition_rule(enabled=False)]
+        rule = AlertRule(
+            rule_name="Disabled",
+            trigger_type=AlertTriggerType.REGIME_TRANSITION,
+            alert_severity=AlertSeverity.WARNING,
+            enabled=False,
         )
+        engine = AlertRuleEngine([rule])
         delta = _delta(is_regime_transition=True, severity="major")
         assert engine.evaluate(delta) == []
 
@@ -206,24 +204,34 @@ class TestRegimeTransitionRule:
 
 
 class TestStalenessRule:
+    def _rule(self) -> AlertRule:
+        return AlertRule(
+            rule_name="Staleness",
+            trigger_type=AlertTriggerType.STALENESS_WARNING,
+            alert_severity=AlertSeverity.WARNING,
+        )
+
     def test_fires_on_stale(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        events = engine.evaluate(_delta(), regime_freshness_status="stale")
+        events = AlertRuleEngine([self._rule()]).evaluate(_delta(), regime_freshness_status="stale")
         assert len(events) == 1
         assert events[0].trigger_type == AlertTriggerType.STALENESS_WARNING
 
     def test_fires_on_unknown(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        events = engine.evaluate(_delta(), regime_freshness_status="unknown")
+        events = AlertRuleEngine([self._rule()]).evaluate(
+            _delta(), regime_freshness_status="unknown"
+        )
         assert len(events) == 1
 
     def test_does_not_fire_on_fresh(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        assert engine.evaluate(_delta(), regime_freshness_status="fresh") == []
+        assert (
+            AlertRuleEngine([self._rule()]).evaluate(_delta(), regime_freshness_status="fresh")
+            == []
+        )
 
     def test_does_not_fire_on_late(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        assert engine.evaluate(_delta(), regime_freshness_status="late") == []
+        assert (
+            AlertRuleEngine([self._rule()]).evaluate(_delta(), regime_freshness_status="late") == []
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -232,37 +240,48 @@ class TestStalenessRule:
 
 
 class TestTrustDegradationRule:
+    def _rule(self) -> AlertRule:
+        return AlertRule(
+            rule_name="Trust degradation",
+            trigger_type=AlertTriggerType.TRUST_DEGRADATION,
+            alert_severity=AlertSeverity.CRITICAL,
+        )
+
     def test_fires_on_low_confidence(self) -> None:
-        engine = AlertRuleEngine([_trust_rule()])
-        events = engine.evaluate(_delta(), regime_confidence="low")
+        events = AlertRuleEngine([self._rule()]).evaluate(_delta(), regime_confidence="low")
         assert len(events) == 1
         assert events[0].trigger_type == AlertTriggerType.TRUST_DEGRADATION
         assert events[0].severity == AlertSeverity.CRITICAL
 
     def test_fires_on_partial_degraded(self) -> None:
-        engine = AlertRuleEngine([_trust_rule()])
-        events = engine.evaluate(
-            _delta(),
-            regime_confidence="medium",
-            regime_degraded_status="partial",
+        events = AlertRuleEngine([self._rule()]).evaluate(
+            _delta(), regime_confidence="medium", regime_degraded_status="partial"
         )
         assert len(events) == 1
 
     def test_fires_on_missing_degraded(self) -> None:
-        engine = AlertRuleEngine([_trust_rule()])
-        assert len(engine.evaluate(_delta(), regime_degraded_status="missing")) == 1
+        assert (
+            len(
+                AlertRuleEngine([self._rule()]).evaluate(_delta(), regime_degraded_status="missing")
+            )
+            == 1
+        )
 
     def test_fires_on_source_unavailable(self) -> None:
-        engine = AlertRuleEngine([_trust_rule()])
         assert (
-            len(engine.evaluate(_delta(), regime_degraded_status="source_unavailable"))
+            len(
+                AlertRuleEngine([self._rule()]).evaluate(
+                    _delta(), regime_degraded_status="source_unavailable"
+                )
+            )
             == 1
         )
 
     def test_does_not_fire_on_high_confidence_none_degraded(self) -> None:
-        engine = AlertRuleEngine([_trust_rule()])
         assert (
-            engine.evaluate(_delta(), regime_confidence="high", regime_degraded_status="none")
+            AlertRuleEngine([self._rule()]).evaluate(
+                _delta(), regime_confidence="high", regime_degraded_status="none"
+            )
             == []
         )
 
@@ -273,8 +292,14 @@ class TestTrustDegradationRule:
 
 
 class TestSignalReversalRule:
+    def _rule(self) -> AlertRule:
+        return AlertRule(
+            rule_name="Signal reversal",
+            trigger_type=AlertTriggerType.SIGNAL_REVERSAL,
+            alert_severity=AlertSeverity.WARNING,
+        )
+
     def test_fires_on_label_change(self) -> None:
-        engine = AlertRuleEngine([_signal_reversal_rule()])
         delta = _delta(
             label_changed=True,
             is_regime_transition=True,
@@ -282,13 +307,12 @@ class TestSignalReversalRule:
             current_label="contraction",
             current_family="contraction",
         )
-        events = engine.evaluate(delta)
+        events = AlertRuleEngine([self._rule()]).evaluate(delta)
         assert len(events) == 1
         assert events[0].trigger_type == AlertTriggerType.SIGNAL_REVERSAL
 
     def test_does_not_fire_without_label_change(self) -> None:
-        engine = AlertRuleEngine([_signal_reversal_rule()])
-        assert engine.evaluate(_delta(label_changed=False)) == []
+        assert AlertRuleEngine([self._rule()]).evaluate(_delta(label_changed=False)) == []
 
 
 # ---------------------------------------------------------------------------
@@ -298,10 +322,18 @@ class TestSignalReversalRule:
 
 class TestMultipleRules:
     def test_multiple_rules_can_fire(self) -> None:
-        engine = AlertRuleEngine([
-            _regime_transition_rule(),
-            _signal_reversal_rule(),
-        ])
+        rules = [
+            AlertRule(
+                rule_name="Transitions",
+                trigger_type=AlertTriggerType.REGIME_TRANSITION,
+                alert_severity=AlertSeverity.WARNING,
+            ),
+            AlertRule(
+                rule_name="Signal reversals",
+                trigger_type=AlertTriggerType.SIGNAL_REVERSAL,
+                alert_severity=AlertSeverity.WARNING,
+            ),
+        ]
         delta = _delta(
             label_changed=True,
             is_regime_transition=True,
@@ -310,15 +342,19 @@ class TestMultipleRules:
             current_label="contraction",
             current_family="contraction",
         )
-        events = engine.evaluate(delta)
+        events = AlertRuleEngine(rules).evaluate(delta)
         assert len(events) == 2
         types = {e.trigger_type for e in events}
         assert AlertTriggerType.REGIME_TRANSITION in types
         assert AlertTriggerType.SIGNAL_REVERSAL in types
 
     def test_context_snapshot_id_attached(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        events = engine.evaluate(
+        rule = AlertRule(
+            rule_name="Staleness",
+            trigger_type=AlertTriggerType.STALENESS_WARNING,
+            alert_severity=AlertSeverity.WARNING,
+        )
+        events = AlertRuleEngine([rule]).evaluate(
             _delta(),
             regime_freshness_status="stale",
             context_snapshot_id="snap-xyz",
@@ -326,8 +362,12 @@ class TestMultipleRules:
         assert events[0].context_snapshot_id == "snap-xyz"
 
     def test_country_attached(self) -> None:
-        engine = AlertRuleEngine([_staleness_rule()])
-        events = engine.evaluate(
+        rule = AlertRule(
+            rule_name="Staleness",
+            trigger_type=AlertTriggerType.STALENESS_WARNING,
+            alert_severity=AlertSeverity.WARNING,
+        )
+        events = AlertRuleEngine([rule]).evaluate(
             _delta(),
             regime_freshness_status="stale",
             country="US",
@@ -335,6 +375,5 @@ class TestMultipleRules:
         assert events[0].country == "US"
 
     def test_empty_rules_list(self) -> None:
-        engine = AlertRuleEngine([])
         delta = _delta(is_regime_transition=True)
-        assert engine.evaluate(delta) == []
+        assert AlertRuleEngine([]).evaluate(delta) == []

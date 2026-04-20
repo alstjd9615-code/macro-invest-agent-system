@@ -228,10 +228,11 @@ class AlertRuleEngine:
     ) -> AlertEvent | None:
         if rule.indicator_type is None or rule.threshold_delta is None:
             return None
-        raw = delta.metadata.get(rule.indicator_type) if hasattr(delta, "metadata") else None  # type: ignore[attr-defined]
+        # RegimeDelta does not yet carry per-indicator delta values.
+        # This hook is forward-compatible: once indicator-level deltas are
+        # attached to the delta metadata, this code path will activate.
+        raw: str | None = getattr(delta, "metadata", {}).get(rule.indicator_type)
         if raw is None:
-            # Attempt to read from RegimeDelta's supporting_states-style metadata
-            # stored as a plain dict on the delta object (forward-compatible hook)
             return None
         try:
             actual_delta = abs(float(raw))
