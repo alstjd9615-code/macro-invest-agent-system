@@ -28,7 +28,6 @@ from domain.macro.regime import (
 from domain.macro.snapshot import DegradedStatus
 from pipelines.ingestion.models import FreshnessStatus
 
-
 # ---------------------------------------------------------------------------
 # Fixture helpers
 # ---------------------------------------------------------------------------
