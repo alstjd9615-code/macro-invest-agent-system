@@ -15,7 +15,11 @@ from apps.api.dto.regimes import (
     RegimeTransitionDTO,
 )
 from domain.macro.change_detection import RegimeDelta, detect_regime_change
-from domain.macro.history import build_regime_history_bundle, regime_to_historical_record
+from domain.macro.history import (
+    HistoricalRegimeRecord,
+    build_regime_history_bundle,
+    regime_to_historical_record,
+)
 from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeLabel
 from domain.macro.snapshot import DegradedStatus
 from pipelines.ingestion.models import FreshnessStatus
@@ -93,11 +97,8 @@ def _delta_to_dto(delta: RegimeDelta) -> RegimeDeltaDTO:
     )
 
 
-def _historical_record_to_dto(record: object) -> HistoricalRegimeDTO:
+def _historical_record_to_dto(record: HistoricalRegimeRecord) -> HistoricalRegimeDTO:
     """Convert a :class:`~domain.macro.history.HistoricalRegimeRecord` to DTO."""
-    from domain.macro.history import HistoricalRegimeRecord
-
-    assert isinstance(record, HistoricalRegimeRecord)
     return HistoricalRegimeDTO(
         regime_id=record.regime_id,
         as_of_date=record.as_of_date,

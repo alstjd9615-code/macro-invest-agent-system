@@ -179,8 +179,9 @@ def build_regime_history_bundle(
         A :class:`RegimeHistoryBundle` with flattened records.
     """
     records = [regime_to_historical_record(r) for r in regimes]
+    _min_for_previous = 2
     latest = records[0] if records else None
-    previous = records[1] if len(records) >= 2 else None  # noqa: PLR2004
+    previous = records[1] if len(records) >= _min_for_previous else None
     return RegimeHistoryBundle(
         as_of_date=as_of_date,
         records=records,
