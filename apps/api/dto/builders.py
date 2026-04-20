@@ -366,6 +366,13 @@ def build_what_changed(narrative: RegimeNarrative) -> WhatChangedDTO | None:
         prior_regime_label=transition_from_prior or None,
         transition_type=transition,
         changed=transition not in {"unchanged", "initial", "unknown"},
+        severity="unchanged" if transition in {"unchanged", "initial", "unknown"} else "minor",
+        changed_dimensions=["label"] if transition == "shift" else [],
+        confidence_direction=(
+            "improved" if transition == "strengthening"
+            else "weakened" if transition == "weakening"
+            else "unchanged"
+        ),
     )
 
 

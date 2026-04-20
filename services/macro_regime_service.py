@@ -97,3 +97,13 @@ class MacroRegimeService(RegimeServiceInterface):
             current.as_of_date - timedelta(days=1)
         )
         return current, previous
+
+    async def list_recent_regimes(
+        self,
+        as_of_date: date,
+        limit: int = 10,
+    ) -> list[MacroRegime]:
+        if self._regime_repository is None:
+            raise ValueError("Regime repository is not configured")
+        return await self._regime_repository.list_recent(as_of_date=as_of_date, limit=limit)
+
