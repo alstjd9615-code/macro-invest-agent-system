@@ -27,5 +27,15 @@ class InMemoryMacroRegimeStore(MacroRegimeRepositoryContract):
             return None
         return max(candidates, key=lambda r: r.as_of_date)
 
+    async def list_recent(self, as_of_date: date, limit: int = 10) -> list[MacroRegime]:
+        """Return up to *limit* regimes on or before *as_of_date*, most recent first.
+
+        When multiple regimes share the same ``as_of_date`` (e.g. re-runs),
+        ties are broken by ``regime_timestamp`` (most recent first).
+        """
+        candidates = [r for r in self._regimes if r.as_of_date <= as_of_date]
+        candidates.sort(key=lambda r: (r.as_of_date, r.regime_timestamp), reverse=True)
+        return candidates[:limit]
+
     def all_regimes(self) -> list[MacroRegime]:
         return list(self._regimes)

@@ -126,3 +126,18 @@ class RegimeServiceInterface(ABC):
         self, as_of_date: date
     ) -> tuple[MacroRegime, MacroRegime | None]:
         """Load current regime plus previous baseline regime."""
+
+    @abstractmethod
+    async def list_recent_regimes(
+        self, as_of_date: date, limit: int = 10
+    ) -> list[MacroRegime]:
+        """Return up to *limit* regimes on or before *as_of_date*, most recent first.
+
+        Args:
+            as_of_date: Upper bound date (inclusive).
+            limit: Maximum number of regimes to return.  Must be ≥ 1.
+
+        Returns:
+            List of regimes ordered by ``as_of_date`` descending.
+            Empty list when the store is empty.
+        """

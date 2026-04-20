@@ -348,6 +348,12 @@ def build_what_changed(narrative: RegimeNarrative) -> WhatChangedDTO | None:
 
     Returns ``None`` when this is an initial regime (no prior baseline).
 
+    Note: This builder derives change metadata from the ``RegimeNarrative`` context,
+    which carries transition type and prior label but not the full prior ``MacroRegime``
+    object.  For a complete change analysis with full severity classification, use
+    :func:`~domain.macro.change_detection.detect_regime_change` with the actual
+    domain objects (as the compare endpoint does).
+
     Args:
         narrative: The :class:`~domain.macro.narrative_builder.RegimeNarrative` to
             derive ``what_changed`` from.
@@ -362,10 +368,36 @@ def build_what_changed(narrative: RegimeNarrative) -> WhatChangedDTO | None:
     if transition == "initial" or not transition_from_prior:
         return None
 
+    changed = transition not in {"unchanged", "initial", "unknown"}
+
+    # Derive changed_dimensions and confidence_direction from transition type.
+    # This is a best-effort approximation from the narrative context only.
+    # The compare endpoint provides a more complete delta via detect_regime_change().
+    changed_dimensions: list[str] = []
+    confidence_direction = "unchanged"
+    severity = "unchanged"
+
+    if transition == "shift":
+        changed_dimensions.append("label")
+        severity = "moderate"  # minimum for a label change; compare endpoint refines further
+    elif transition == "strengthening":
+        changed_dimensions.append("confidence")
+        confidence_direction = "improved"
+        severity = "minor"
+    elif transition == "weakening":
+        changed_dimensions.append("confidence")
+        confidence_direction = "weakened"
+        severity = "minor"
+    elif changed:
+        severity = "minor"
+
     return WhatChangedDTO(
         prior_regime_label=transition_from_prior or None,
         transition_type=transition,
-        changed=transition not in {"unchanged", "initial", "unknown"},
+        changed=changed,
+        severity=severity,
+        changed_dimensions=changed_dimensions,
+        confidence_direction=confidence_direction,
     )
 
 

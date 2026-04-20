@@ -8,7 +8,8 @@ Exposes:
 - ``POST /api/snapshots/compare``          — snapshot comparison (analyst read).
 - ``GET /api/signals/latest``              — latest regime-grounded signal evaluations.
 - ``GET /api/regimes/latest``              — latest persisted macro regime (analyst read).
-- ``GET /api/regimes/compare``             — current-vs-prior regime transition (analyst read).
+- ``GET /api/regimes/compare``             — current-vs-prior regime transition + change delta.
+- ``GET /api/regimes/history``             — recent regime history list (analyst read).
 - ``GET /api/explanations/regime/latest``  — analyst narrative for current regime.
 - ``GET /api/explanations/run/{run_id}``   — all explanations for a run.
 - ``GET /api/explanations/{id}``           — explanation by ID.

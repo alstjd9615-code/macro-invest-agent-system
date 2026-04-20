@@ -94,6 +94,12 @@ class WhatChangedDTO(BaseModel, extra="forbid"):
         changed: True when the regime label changed from the prior.
         changed_indicators_count: Number of snapshot indicators that changed;
             ``None`` when not available.
+        severity: Heuristic change severity — ``"unchanged"``, ``"minor"``,
+            ``"moderate"``, ``"major"``.  Explicitly heuristic (v1).
+        changed_dimensions: Dimensions that changed (e.g. ``["label", "family"]``).
+            Empty when nothing changed.
+        confidence_direction: Direction of confidence change — ``"improved"``,
+            ``"weakened"``, ``"unchanged"``, or ``"not_applicable"`` for initial.
     """
 
     prior_regime_label: str | None = Field(
@@ -111,6 +117,27 @@ class WhatChangedDTO(BaseModel, extra="forbid"):
     changed_indicators_count: int | None = Field(
         default=None,
         description="Number of snapshot indicators that changed; None when not available",
+    )
+    severity: str = Field(
+        default="unchanged",
+        description=(
+            "Heuristic change severity (v1, not statistically calibrated): "
+            "unchanged | minor | moderate | major"
+        ),
+    )
+    changed_dimensions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Dimensions that changed: may include 'label', 'family', 'confidence'. "
+            "Empty when nothing changed."
+        ),
+    )
+    confidence_direction: str = Field(
+        default="not_applicable",
+        description=(
+            "Direction of confidence change: "
+            "improved | weakened | unchanged | not_applicable"
+        ),
     )
 
 
