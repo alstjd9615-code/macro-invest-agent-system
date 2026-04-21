@@ -13,6 +13,10 @@ Exposes:
 - ``GET /api/explanations/regime/latest``  — analyst narrative for current regime.
 - ``GET /api/explanations/run/{run_id}``   — all explanations for a run.
 - ``GET /api/explanations/{id}``           — explanation by ID.
+- ``GET /api/alerts/recent``                — recent alert events (queryable by type/severity/country/time).
+- ``GET /api/alerts/{id}``                  — alert event by ID.
+- ``PATCH /api/alerts/{id}/acknowledge``    — mark alert as acknowledged (analyst-facing).
+- ``PATCH /api/alerts/{id}/snooze``         — snooze alert until a datetime (analyst-facing).
 - ``GET /api/sessions/{id}``               — session context by ID (analyst read).
 
 Usage::
@@ -34,6 +38,7 @@ from apps.api.dependencies import (
     _regime_service_singleton,
     _snapshot_store_singleton,
 )
+from apps.api.routers import alerts as alerts_router
 from apps.api.routers import explanations as explanations_router
 from apps.api.routers import regimes as regimes_router
 from apps.api.routers import sessions as sessions_router
@@ -129,6 +134,7 @@ app.include_router(signals_router.router)
 app.include_router(explanations_router.router)
 app.include_router(sessions_router.router)
 app.include_router(regimes_router.router)
+app.include_router(alerts_router.router)
 
 
 # ---------------------------------------------------------------------------

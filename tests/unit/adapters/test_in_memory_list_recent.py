@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, date, datetime
 
-import pytest
-
 from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
 from domain.macro.regime import (

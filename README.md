@@ -89,12 +89,19 @@ Read-Only API  ←→  Streamlit Analyst Workbench
 | **Analyst API** | Read-only FastAPI routes for snapshots, regimes, signals, explanations, sessions; `trust` metadata on every response |
 | **Analyst Workbench** | Streamlit app consuming the REST API; snapshot panel, comparison table, signal cards, trust badges |
 | **Observability** | Prometheus metrics, Grafana dashboards, structured logging via `structlog`, OpenTelemetry tracing |
+| **Alerting & Monitoring (Ch.6)** | Configurable `AlertRuleEngine`; 5 alert types; structured `AlertEvent` with `trigger_type`, `severity`, `source_regime`, `target_regime`, `context_snapshot_id`; analyst acknowledge/snooze; `GET /api/alerts/recent`, `GET /api/alerts/{id}` |
 
 ### 🔜 Next (planned — not yet in codebase)
 
 - **Explanation Engine v2** — structured `reasoning_chain` objects replacing template strings; `what_changed` section
 - **Explanation Persistence** — durable repository replacing the in-memory `_store` dict
 - **Analyst Workflow Surface** — ordered 6-step workflow DTO (current_state → why → confidence → conflict → caveats → what_changed) and updated workbench panels
+- **External Event Ingestion (Ch.7)** — `ExternalEvent` domain model; ingestion adapters for FRED release calendars and Fed announcement schedules
+- **Catalyst Attribution (Ch.8)** — `AttributionRule` matching `FeatureDelta` to candidate external events; `catalyst_context` in explanation DTOs
+- **Fundamental Intelligence (Ch.9)** — `FundamentalFact` domain model; sector-level composite snapshots; `GET /api/fundamentals/sectors/latest`
+- **Scenario Engine (Ch.10)** — `ScenarioSpec` parameter overrides; `ScenarioResult` with `is_hypothetical=True`; historical scenario lookup
+- **Portfolio Overlay (Ch.11)** — `RegimeAllocationMatrix`; `PortfolioOverlay` with signal alignment score; `GET /api/portfolio/overlay/latest`
+- **LLM Research Copilot (Ch.12)** — grounded `NarrativeRequest`/`NarrativeDraft`; every sentence traceable to a structured fact
 
 ---
 
@@ -169,7 +176,7 @@ Production deployments should disable the seeder (`SEED_ON_STARTUP=false`) and r
 
 ## API surface overview
 
-All routes are **read-only**. No write endpoints are exposed.
+All routes are **read-only** except the analyst-facing alert acknowledgement and snooze endpoints.
 
 | Method | Route | Description | Status |
 |--------|-------|-------------|--------|
@@ -184,6 +191,10 @@ All routes are **read-only**. No write endpoints are exposed.
 | `GET` | `/api/explanations/regime/latest` | Analyst narrative for current regime | Phase 3 bridge |
 | `GET` | `/api/explanations/{id}` | Explanation by run/signal ID (in-memory) | Experimental |
 | `GET` | `/api/sessions/{id}` | Session context by ID | Experimental |
+| `GET` | `/api/alerts/recent` | Recent alert events (filterable by type/severity/country/time) | Chapter 6 |
+| `GET` | `/api/alerts/{id}` | Alert event by ID | Chapter 6 |
+| `PATCH` | `/api/alerts/{id}/acknowledge` | Mark alert as acknowledged (analyst-facing) | Chapter 6 |
+| `PATCH` | `/api/alerts/{id}/snooze` | Snooze alert until datetime (analyst-facing) | Chapter 6 |
 
 Interactive API docs: `http://localhost:8000/docs`
 
