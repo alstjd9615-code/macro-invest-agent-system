@@ -251,7 +251,7 @@ class TestRegimeDeltaFields:
         assert len(delta.severity_rationale) > 0
 
     def test_extra_fields_forbidden(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             RegimeDelta(
                 unknown_field="x",  # type: ignore[call-arg]
                 severity="major",

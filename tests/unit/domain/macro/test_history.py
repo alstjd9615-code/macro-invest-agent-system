@@ -137,7 +137,7 @@ class TestBuildRegimeHistoryBundle:
 
 class TestRegimeHistoryBundleModel:
     def test_model_extra_forbid(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             RegimeHistoryBundle(
                 as_of_date=date(2026, 1, 1),
                 total=0,

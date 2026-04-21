@@ -68,7 +68,6 @@ from pydantic import BaseModel, Field
 from domain.macro.regime import (
     MacroRegime,
     RegimeConfidence,
-    RegimeFamily,
     RegimeLabel,
 )
 

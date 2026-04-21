@@ -18,7 +18,6 @@ from domain.macro.change_detection import RegimeDelta, detect_regime_change
 from domain.macro.history import (
     HistoricalRegimeRecord,
     build_regime_history_bundle,
-    regime_to_historical_record,
 )
 from domain.macro.regime import MacroRegime, RegimeConfidence, RegimeLabel
 from domain.macro.snapshot import DegradedStatus
