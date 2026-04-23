@@ -125,32 +125,39 @@ Turns change detection into proactive analyst notification.
 - Analyst-facing acknowledgement/snooze: `PATCH /api/alerts/{id}/acknowledge`,
   `PATCH /api/alerts/{id}/snooze`
 
-### Chapter 7 — External Event & Catalyst Intelligence (Ingestion Layer)
+### Chapter 7 — External Event & Catalyst Intelligence (Ingestion Layer) ✅ (complete)
 
 Introduces the external event ingestion layer with normalized, structured
 event facts distinct from raw news aggregation.
 
-- `ExternalEvent` domain model: `event_type`, `source`, `occurred_at`,
+- `NormalizedExternalEvent` domain model: `event_type`, `source`, `occurred_at`,
   `normalized_at`, `raw_payload_ref`, `structured_fields`
-- Ingestion adapters for structured sources: economic release calendars
-  (FRED release dates, Fed announcement schedules)
-- Normalization layer that maps raw structured data into typed `ExternalEvent`
-  records — explicitly distinct from interpretation or impact
-- Event freshness and source attribution tracked consistently with macro
-  indicator tracking
+- `ExternalEventType`, `ExternalEventFreshness`, `SourceReliabilityTier`,
+  `ExternalEventStatus` enums
+- Normalization helpers: `compute_event_freshness()`, source reliability mapping
+- `InMemoryEventStore` repository with full filtering support
+- Event Impact Adapter producing `ExternalEventImpact` with explanation evidence,
+  caveat notes, conflict contributors, and confidence downgrade hints
 - Read API: `GET /api/events/recent`, `GET /api/events/{id}`
 
-### Chapter 8 — Catalyst-Aware Interpretation
+### Chapter 8 — Catalyst-Aware Interpretation ✅ (complete)
 
 Attributes observed `FeatureDelta` records to candidate external event causes
 using deterministic, rule-based matching.
 
 - `AttributionRule` domain model: `(event_type, indicator_type, max_lag_days)`
-- `ChangeAttribution` read model with `confidence` enum:
-  `high` / `medium` / `low` / `unattributed`
+- `AttributionConfidence` enum: `high` / `medium` / `low` / `unattributed`
+- Deterministic `attribute_delta()` — single-delta attribution with exact-rule
+  matching + heuristic fallback map
+- `run_attribution()` — batch attribution for all changing deltas in a snapshot
+  comparison
+- `ChangeAttribution` read model with `CatalystContext` block for downstream
+  embedding in explanation DTOs
+- `AttributionRunResult` container with counts and `summary_context()` helper
+- 9 built-in rules covering CPI, GDP, unemployment, retail sales, PMI, 10Y yield,
+  and central bank rate decisions
 - Advisory attribution adds context to explanations; does not override
   deterministic regime computation
-- `catalyst_context` block added to explanation DTOs
 
 ### Chapter 9 — Fundamental Intelligence Layer
 

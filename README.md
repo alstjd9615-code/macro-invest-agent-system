@@ -90,14 +90,14 @@ Read-Only API  ←→  Streamlit Analyst Workbench
 | **Analyst Workbench** | Streamlit app consuming the REST API; snapshot panel, comparison table, signal cards, trust badges |
 | **Observability** | Prometheus metrics, Grafana dashboards, structured logging via `structlog`, OpenTelemetry tracing |
 | **Alerting & Monitoring (Ch.6)** | Configurable `AlertRuleEngine`; 5 alert types; structured `AlertEvent` with `trigger_type`, `severity`, `source_regime`, `target_regime`, `context_snapshot_id`; analyst acknowledge/snooze; `GET /api/alerts/recent`, `GET /api/alerts/{id}` |
+| **External Event Ingestion (Ch.7)** | `NormalizedExternalEvent` domain model; `ExternalEventType`, `ExternalEventFreshness`, `SourceReliabilityTier` enums; normalization helpers; `InMemoryEventStore`; event impact adapter producing `ExternalEventImpact`; `GET /api/events/recent`, `GET /api/events/{id}` |
+| **Catalyst Attribution (Ch.8)** | `AttributionRule` domain model; deterministic rule-based `attribute_delta()` / `run_attribution()` engine; `ChangeAttribution` read model with `CatalystContext` block; `AttributionConfidence` enum (high/medium/low/unattributed); heuristic fallback map; 9 built-in rules covering key macro indicators |
 
 ### 🔜 Next (planned — not yet in codebase)
 
 - **Explanation Engine v2** — structured `reasoning_chain` objects replacing template strings; `what_changed` section
 - **Explanation Persistence** — durable repository replacing the in-memory `_store` dict
 - **Analyst Workflow Surface** — ordered 6-step workflow DTO (current_state → why → confidence → conflict → caveats → what_changed) and updated workbench panels
-- **External Event Ingestion (Ch.7)** — `ExternalEvent` domain model; ingestion adapters for FRED release calendars and Fed announcement schedules
-- **Catalyst Attribution (Ch.8)** — `AttributionRule` matching `FeatureDelta` to candidate external events; `catalyst_context` in explanation DTOs
 - **Fundamental Intelligence (Ch.9)** — `FundamentalFact` domain model; sector-level composite snapshots; `GET /api/fundamentals/sectors/latest`
 - **Scenario Engine (Ch.10)** — `ScenarioSpec` parameter overrides; `ScenarioResult` with `is_hypothetical=True`; historical scenario lookup
 - **Portfolio Overlay (Ch.11)** — `RegimeAllocationMatrix`; `PortfolioOverlay` with signal alignment score; `GET /api/portfolio/overlay/latest`
