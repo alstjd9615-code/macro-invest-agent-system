@@ -16,7 +16,7 @@ Not suitable for
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from domain.events.enums import ExternalEventStatus, ExternalEventType
 from domain.events.models import NormalizedExternalEvent
@@ -66,9 +66,12 @@ class InMemoryEventStore(EventRepositoryInterface):
         if region is not None:
             results = [e for e in results if e.region == region]
         if since is not None:
-            results = [e for e in results if e.occurred_at >= since]
+            # Normalise naive datetimes to UTC-aware for comparison.
+            since_utc = since.replace(tzinfo=UTC) if since.tzinfo is None else since
+            results = [e for e in results if e.occurred_at >= since_utc]
         if until is not None:
-            results = [e for e in results if e.occurred_at <= until]
+            until_utc = until.replace(tzinfo=UTC) if until.tzinfo is None else until
+            results = [e for e in results if e.occurred_at <= until_utc]
         results.sort(key=lambda e: e.occurred_at, reverse=True)
         return results[:limit]
 
