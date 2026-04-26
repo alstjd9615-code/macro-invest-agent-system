@@ -6,7 +6,7 @@ data fetching to a real or stub adapter.  When no source is provided, synthetic
 placeholder data is returned so that the service layer is always operational.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from core.contracts.macro_data_source import MacroDataSourceContract
 from core.logging.logger import get_logger
@@ -95,7 +95,7 @@ class MacroService(MacroServiceInterface):
                         indicator_type=indicator,
                         source=MacroSourceType.MARKET_DATA,
                         value=50.0,  # Placeholder value
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(UTC),
                         frequency=DataFrequency.MONTHLY,
                         country=country,
                         metadata={"status": "placeholder"},
@@ -172,6 +172,6 @@ class MacroService(MacroServiceInterface):
             )
             return MacroSnapshot(
                 features=features,
-                snapshot_time=datetime.utcnow(),
+                snapshot_time=datetime.now(UTC),
                 version=1,
             )

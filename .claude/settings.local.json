@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run *)",
+      "Bash(python -m pytest tests/ --tb=short -q)",
+      "Bash(python -m ruff check .)",
+      "Bash(python -m pytest tests/ -q --tb=short)",
+      "Bash(python -m pytest tests/ --tb=short)",
+      "mcp__plugin_github_github__get_me",
+      "mcp__plugin_github_github__list_pull_requests",
+      "mcp__plugin_github_github__list_issues",
+      "mcp__plugin_github_github__get_copilot_job_status",
+      "mcp__plugin_github_github__pull_request_read",
+      "Bash(git fetch *)",
+      "Bash(python *)"
+    ]
+  }
+}

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 

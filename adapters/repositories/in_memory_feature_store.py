@@ -41,6 +41,9 @@ class InMemoryFeatureStore(FeatureStoreRepositoryContract):
 
     def __init__(self) -> None:
         self._snapshots: list[FeatureSnapshot] = []
+        self._raw_records: dict[str, list[RawFeatureRecord]] = {}
+        self._normalized_records: dict[str, list[NormalizedMacroObservation]] = {}
+        self._ingestion_runs: list[IngestionRunRecord] = []
 
     async def save_snapshot(self, snapshot: object) -> None:
         """Append a snapshot to the in-memory store.
@@ -100,3 +103,29 @@ class InMemoryFeatureStore(FeatureStoreRepositoryContract):
             All stored snapshots in insertion order.
         """
         return list(self._snapshots)
+
+    # ------------------------------------------------------------------
+    # Raw / normalized / run record persistence (optional protocol)
+    # ------------------------------------------------------------------
+
+    async def save_raw_records(
+        self, snapshot_id: str, records: list[RawFeatureRecord]
+    ) -> None:
+        self._raw_records.setdefault(snapshot_id, []).extend(records)
+
+    async def save_normalized_records(
+        self, snapshot_id: str, records: list[NormalizedMacroObservation]
+    ) -> None:
+        self._normalized_records.setdefault(snapshot_id, []).extend(records)
+
+    async def save_ingestion_run(self, run: IngestionRunRecord) -> None:
+        self._ingestion_runs.append(run)
+
+    def raw_records(self, snapshot_id: str) -> list[RawFeatureRecord]:
+        return list(self._raw_records.get(snapshot_id, []))
+
+    def normalized_records(self, snapshot_id: str) -> list[NormalizedMacroObservation]:
+        return list(self._normalized_records.get(snapshot_id, []))
+
+    def ingestion_runs(self) -> list[IngestionRunRecord]:
+        return list(self._ingestion_runs)

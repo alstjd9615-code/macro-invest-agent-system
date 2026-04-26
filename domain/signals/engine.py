@@ -1,7 +1,7 @@
 """Deterministic signal evaluation engine."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from domain.macro.models import MacroSnapshot
 from domain.signals.enums import SignalStrength
@@ -61,7 +61,7 @@ class SignalEngine:
 
         return SignalResult(
             run_id=run_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             macro_snapshot=snapshot,
             signals=signals,
             success=True,
@@ -107,7 +107,7 @@ class SignalEngine:
             signal_type=signal_def.signal_type,
             strength=strength,
             score=final_score,
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(UTC),
             rule_results=rule_results,
             rationale=f"Signal {signal_def.name} evaluated with {len(rule_results)} rules",
         )
