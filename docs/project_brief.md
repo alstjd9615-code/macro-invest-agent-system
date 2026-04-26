@@ -78,11 +78,17 @@ Agent Layer  →  MCP Tool Layer  →  Domain Layer  →  Storage
 
 ## 7. Phase Roadmap
 
-| Phase | Focus | Status |
+> ⚠️ **Superseded — historical reference only.**
+> This table was written before detailed chapter scoping began.  The labels and
+> scope here **do not match** the active chapter roadmap in
+> [`docs/roadmap.md`](./roadmap.md).  All sequencing and status decisions must
+> be taken from `docs/roadmap.md`, which is the canonical source of truth.
+
+| Phase (legacy) | Original focus | Active chapter equivalent |
 |---|---|---|
-| 1 — Foundation | Repository skeleton, core modules, local infra | **In progress** |
-| 2 — Domain + MCP | Feature computation, signal engine, MCP tools | Planned |
-| 3 — Agent Wiring | LLM agent integration, prompt templates | Planned |
-| 4 — Data Pipelines | Real macro data ingestion, pipeline orchestration | Planned |
-| 5 — Harness + Eval | Prompt regression, tool replay, adversarial scenarios | Planned |
-| 6 — Observability | OpenTelemetry, metrics, alerting | Planned |
+| 1 — Foundation | Repository skeleton, core modules, local infra | Chapter 1 — Macro Data Foundation |
+| 2 — Domain + MCP | Feature computation, signal engine, MCP tools | Chapter 2 — Macro Snapshot Layer |
+| 3 — Agent Wiring | LLM agent integration, prompt templates | Chapter 3 — Macro Regime Engine |
+| 4 — Data Pipelines | Real macro data ingestion, pipeline orchestration | Chapter 4 — Multi-Engine Analysis Hub |
+| 5 — Harness + Eval | Prompt regression, tool replay, adversarial scenarios | Chapter 5 — Alerting |
+| 6 — Observability | OpenTelemetry, metrics, alerting | Chapter 6 — AI Explanation Engine |

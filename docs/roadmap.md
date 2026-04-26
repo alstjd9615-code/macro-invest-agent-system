@@ -1,6 +1,91 @@
 # Roadmap
 
-## Phase 1 — Macro Data Foundation ✅
+> **Canonical source of truth for all roadmap sequencing.**
+> `docs/project_brief.md §7` contains a superseded high-level phase sketch written
+> before detailed chapter scoping began.  That table is preserved for historical
+> context only.  **This file governs.**  Any conflict between the two must be
+> resolved in favour of this document.
+
+---
+
+## Phase / Chapter Label Reconciliation
+
+The project began with a numeric `Phase 1–6` convention inherited from the
+initial project brief.  Forward-looking planning uses `Chapter` labels to
+distinguish completed foundation work from the active multi-engine roadmap.
+The table below is the authoritative mapping; both label styles remain valid
+when referring to completed work.
+
+| Legacy label (project_brief.md §7) | Active label (this file) | Status |
+|------------------------------------|--------------------------|--------|
+| Phase 1 — Foundation | Chapter 1 — Macro Data Foundation | ✅ Complete |
+| Phase 2 — Domain + MCP | Chapter 2 — Macro Snapshot Layer | ✅ Complete |
+| Phase 3 — Agent Wiring | Chapter 3 — Macro Regime Engine | ✅ Baseline complete |
+| Phase 4 — Data Pipelines | Chapter 4 — Multi-Engine Analysis Hub | 🔜 Next |
+| Phase 5 — Harness + Eval | Chapter 5 — Alerting | Planned |
+| Phase 6 — Observability | Chapter 6 — AI Explanation Engine | Planned |
+| *(not in brief)* | Chapter 7 — External Event Integration | Planned |
+| *(not in brief)* | Chapter 8 — Fundamental Intelligence | Planned |
+| *(not in brief)* | Chapter 9 — Scenario Search | Planned |
+| *(not in brief)* | Chapter 10 — Catalyst Attribution | Planned |
+| *(not in brief)* | Chapter 11 — Portfolio Allocation Engine | Planned |
+
+---
+
+## Confirmed Assumptions and Scoping Decisions
+
+The following assumptions are locked for planning purposes.  Each must be
+explicitly revisited (and this section updated) before any work that
+contradicts them is started.
+
+1. **Phase / Chapter label reconciliation** — The legacy `Phase 1–6` labels from
+   `docs/project_brief.md §7` and the `Chapter 1–11` labels in this file refer
+   to different scopes.  The table above is the canonical mapping.  Teams must
+   use `Chapter` labels in all new backlog items and design documents to avoid
+   ambiguity.
+
+2. **Alerting scope (Chapter 5)** — Alert *delivery* mechanisms (email, Slack,
+   outbound webhooks) are **out of scope** for the initial alerting chapter.
+   Default scope is alert generation, persistence, and retrieval only.  Delivery
+   channels may be added later by explicit opt-in and must be listed as a
+   separate backlog entry.
+
+3. **External event source requirement (Chapter 7)** — Chapter 7 requires at
+   least one structured, non-NLP external event source (e.g. a calendar feed,
+   structured economic release schedule, or webhook-in endpoint) to be available
+   at chapter kickoff.  Chapter 7 must not begin until this dependency is
+   confirmed in the kickoff checklist.
+
+4. **Fundamental Intelligence coverage default (Chapter 8)** — Coverage defaults
+   to **sector-level aggregate** data.  Individual-ticker coverage requires
+   explicit product approval and a separate backlog item before it may be
+   included in any Chapter 8 deliverable.
+
+5. **Scenario search persistence requirement (Chapter 9)** — Scenario search
+   requires a persisted, queryable historical-state layer.  An in-memory-only
+   history store is insufficient and must not be accepted as a complete
+   implementation of this chapter.
+
+6. **Catalyst attribution approach (Chapter 10)** — The first version of catalyst
+   attribution is **deterministic and heuristic**.  Probabilistic or
+   model-learned attribution is explicitly deferred to a follow-on chapter.
+   Implementations must not introduce probabilistic logic in the v1 deliverable.
+
+7. **Portfolio allocation matrix ownership (Chapter 11)** — The allocation matrix
+   is assumed to be **human-authored and version-controlled** (e.g. checked into
+   the repository as a YAML/JSON artefact).  Auto-generated or ML-optimised
+   matrices are out of scope unless explicitly approved.
+
+8. **LLM grounding policy (Chapter 6 and beyond)** — LLM-backed components must
+   initially be **fact-bounded and reference-backed**: every claim must cite a
+   structured domain object (regime record, signal record, snapshot observation).
+   Strict claim-level fact-ID enforcement (i.e. asserting a unique ID on every
+   generated sentence) is deferred, but all grounding must be traceable to a
+   named domain object from the first release.
+
+---
+
+## Phase 1 / Chapter 1 — Macro Data Foundation ✅
 
 Objective: build reliable ingestion + normalization for priority macro indicators.
 
@@ -13,14 +98,14 @@ Primary deliverables:
 - ingestion run tracking
 - freshness baseline
 
-## Phase 2 — Macro Snapshot Layer ✅
+## Phase 2 / Chapter 2 — Macro Snapshot Layer ✅
 
 - Snapshot contract
 - Deterministic category-state derivation
 - Snapshot build/persist
 - Current-vs-previous snapshot comparison
 
-## Phase 3 — Macro Regime Engine ✅ (baseline complete)
+## Phase 3 / Chapter 3 — Macro Regime Engine ✅ (baseline complete)
 
 - Regime schema/contract
 - Snapshot-to-regime deterministic mapping
@@ -33,7 +118,7 @@ Primary deliverables:
 
 ## Active Workstream — Multi-Engine Analysis Hub
 
-**Current phase focus: Phase 3 completion → Phase 4 bridge**
+**Current chapter focus: Chapter 3 completion → Chapter 4 bridge**
 
 This workstream extends Phase 3 with the signal and explanation layers that
 complete the analyst-facing chain:
@@ -42,7 +127,7 @@ complete the analyst-facing chain:
 Snapshot → Regime → Signals → Explanations → API/UI
 ```
 
-### Phase 3 bridge work (in progress)
+### Chapter 3 bridge work (in progress)
 
 - **Startup regime seeder** — synthetic bootstrap data for dev/test;
   idempotent, metadata-stamped, non-blocking on failure.
@@ -95,9 +180,9 @@ condition.  Caveat priority order:
 6. partial degraded status
 7. low confidence
 
-### Upcoming Phase 4 work
+### Upcoming Chapter 4 work
 
-Phase 4 = **Multi-Engine Analysis Hub** (not yet started):
+Chapter 4 = **Multi-Engine Analysis Hub** (not yet started):
 
 - Quant Scoring Engine
 - Cross-Asset Signal Engine
@@ -207,9 +292,9 @@ These items are intentionally out of scope for the current v1 delivery and
 are tracked here to prevent silent omission.  Each item is linked to a
 future phase where it will be addressed.
 
-### Phase 4–5
+### Chapter 4–5
 - **Dynamic signal confidence** — `signal_confidence` is currently hard-coded at
-  the rule layer.  In a later phase it should be dynamically adjusted using regime
+  the rule layer.  In a later chapter it should be dynamically adjusted using regime
   confidence, indicator recency/freshness, missing/degraded inputs, and quant
   scoring outputs.
 - **Cross-asset conflict resolution** — under `GOLDILOCKS`, equities may be `BUY`
@@ -217,26 +302,28 @@ future phase where it will be addressed.
   reconcile multi-asset disagreements and downgrade conviction where signals conflict.
 - **Richer signal rationale** — current rationale is template-based.  A richer
   signal-level narrative that reflects real-time indicator deltas is deferred to
-  the Quant Scoring Engine phase.
+  the Quant Scoring Engine chapter.
 
-### Phase 5
+### Chapter 5
 - **Explanation persistence** — explanation generation remains in-memory in v1.
   Follow-up work should add persistence for auditability, reproducibility, and
   historical explanation retrieval.
 - **Better narrative quality** — narrative templates will be expanded and improved
   as more regime/signal data becomes available.
 
-### Phase 5–6
+### Chapter 5–6
 - **LLM-backed explanation** — current explanation logic is deterministic and
   template-based.  Replacing or augmenting this with an LLM-backed AI Explanation
-  Engine is future work.
-- **Conversational explanation** — multi-turn analyst dialog is a Phase 6+
+  Engine is Chapter 6 work.  Per the LLM grounding policy (see Confirmed
+  Assumptions), all grounding must be fact-bounded and reference-backed from the
+  first release; strict claim-level fact-ID enforcement is deferred.
+- **Conversational explanation** — multi-turn analyst dialog is a Chapter 7+
   capability.
 
-### Phase 7
+### Chapter 7+
 - **Production-safe seeding controls** — startup seeding is controlled by the
   `SEED_ON_STARTUP` environment variable (default `True`).  A full feature-flag
-  system with per-environment defaults, audit trail, and remote toggle is Phase 7
+  system with per-environment defaults, audit trail, and remote toggle is Chapter 7
   work.
 - **Persistence and audit trail** — the in-memory regime/snapshot stores must be
   backed by a durable repository before production deployment.
