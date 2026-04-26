@@ -74,7 +74,7 @@ def format_comparison_summary(comparison: SnapshotComparison) -> str:
             detail_lines.append(
                 f"  {delta.indicator_type}: {delta.direction} "
                 f"({delta.prior_value:.4g} → {delta.current_value:.4g}, "
-                f"delta={sign}{delta.delta:.4g})."  # type: ignore[arg-type]
+                f"delta={sign}{delta.delta:.4g})."
             )
 
     if detail_lines:

@@ -23,6 +23,7 @@ import requests
 import streamlit as st
 
 from apps.workbench.components.comparison_table import render_comparison_table
+from apps.workbench.components.explanation_panel import render_explanation_panel
 from apps.workbench.components.signal_panel import render_signal_panel
 from apps.workbench.components.snapshot_panel import render_snapshot_panel
 from apps.workbench.components.states import render_empty, render_error
@@ -80,7 +81,7 @@ st.markdown("---")
 def _get(path: str, **params: object) -> dict[str, object] | None:
     """Perform a GET request against the API; return JSON dict or None on error."""
     try:
-        resp = requests.get(f"{API_BASE_URL}{path}", params=params, timeout=10)
+        resp = requests.get(f"{API_BASE_URL}{path}", params=params, timeout=10)  # type: ignore[arg-type]
         resp.raise_for_status()
         return resp.json()  # type: ignore[no-any-return]
     except requests.exceptions.ConnectionError:
@@ -142,6 +143,18 @@ with col_right:
         render_empty("No signals generated for this country.")
     else:
         render_signal_panel(signals_data)
+
+st.markdown("---")
+
+# ---- Explanation panel ----
+st.subheader("🧠 Regime Explanation")
+with st.spinner("Fetching explanation…"):
+    explanation_data = _get("/api/explanations/regime/latest")
+
+if explanation_data is None:
+    render_error("Could not fetch regime explanation.")
+else:
+    render_explanation_panel(explanation_data)
 
 st.markdown("---")
 

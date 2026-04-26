@@ -51,11 +51,11 @@ from agent.schemas import (
     SnapshotComparisonRequest,
     SnapshotComparisonResponse,
 )
+from core.logging.logger import get_logger
+from core.logging.timing import timed_operation
 from domain.macro.comparison import compare_snapshots as domain_compare_snapshots
 from domain.signals.registry import SignalRegistry
 from services.interfaces import MacroServiceInterface, SignalServiceInterface
-from core.logging.logger import get_logger
-from core.logging.timing import timed_operation
 
 _log = get_logger(__name__)
 

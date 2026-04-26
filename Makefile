@@ -14,9 +14,9 @@
 #   make up           Start local infrastructure (docker compose up -d)
 #   make down         Stop local infrastructure (docker compose down)
 #   make logs         Tail docker compose logs
-# =============================================================================
+#  	 =============================================================================
 
-.PHONY: help install format lint typecheck test test-unit test-contract up down logs
+.PHONY: help install format lint typecheck test test-unit test-contract up build down logs
 
 # Show this help message.
 help:
@@ -47,8 +47,11 @@ test-unit: ## Run unit tests for core and domain layers
 test-contract: ## Run MCP contract and schema tests
 	uv run pytest tests/mcp/ -v
 
-up: ## Start local stack (infra + API + frontend + observability)
+up: ## Start local infrastructure (postgres + minio)
 	docker compose up -d
+
+build: ## Rebuild images and start all services (use after code changes)
+	docker compose up -d --build
 
 down: ## Stop local infrastructure
 	docker compose down

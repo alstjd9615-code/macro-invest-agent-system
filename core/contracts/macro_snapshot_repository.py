@@ -23,3 +23,16 @@ class MacroSnapshotRepositoryContract(ABC):
         as_of_date: date,
     ) -> MacroSnapshotState | None:
         """Retrieve latest snapshot on or before as_of_date."""
+
+    @abstractmethod
+    async def list_recent(self, as_of_date: date, limit: int = 10) -> list[MacroSnapshotState]:
+        """Return up to *limit* snapshots on or before *as_of_date*, most recent first.
+
+        Args:
+            as_of_date: Upper bound date (inclusive).
+            limit: Maximum number of snapshots to return.  Must be ≥ 1.
+
+        Returns:
+            Ordered list of snapshots (most recent ``as_of_date`` first).
+            Empty list when no snapshots exist on or before ``as_of_date``.
+        """

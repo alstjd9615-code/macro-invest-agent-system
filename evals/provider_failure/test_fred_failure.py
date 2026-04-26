@@ -30,9 +30,8 @@ class TestFredFailureEval:
             src,
             "fetch_raw",
             new=AsyncMock(side_effect=RuntimeError("FRED unavailable")),
-        ):
-            with pytest.raises(RuntimeError, match="FRED unavailable"):
-                await svc.ingest("US")
+        ), pytest.raises(RuntimeError, match="FRED unavailable"):
+            await svc.ingest("US")
 
     async def test_fred_provider_http_error_propagates(self) -> None:
         """ProviderHTTPError (typed) also surfaces from the ingestion service."""
@@ -45,8 +44,7 @@ class TestFredFailureEval:
             provider_id="fred",
             http_status=503,
         )
-        with patch.object(src, "fetch_raw", new=AsyncMock(side_effect=exc)):
-            with pytest.raises(ProviderError):
+        with patch.object(src, "fetch_raw", new=AsyncMock(side_effect=exc)), pytest.raises(ProviderError):
                 await svc.ingest("US")
 
     async def test_fred_error_message_preserved(self) -> None:
@@ -60,9 +58,8 @@ class TestFredFailureEval:
             src,
             "fetch_raw",
             new=AsyncMock(side_effect=RuntimeError(original_msg)),
-        ):
-            with pytest.raises(RuntimeError, match="503"):
-                await svc.ingest("US")
+        ), pytest.raises(RuntimeError, match="503"):
+            await svc.ingest("US")
 
     async def test_snapshot_not_persisted_on_fred_failure(self) -> None:
         """When FRED raises, no snapshot should be saved to the store."""
@@ -74,9 +71,8 @@ class TestFredFailureEval:
             src,
             "fetch_raw",
             new=AsyncMock(side_effect=RuntimeError("FRED unavailable")),
-        ):
-            with pytest.raises(RuntimeError):
-                await svc.ingest("US")
+        ), pytest.raises(RuntimeError):
+            await svc.ingest("US")
 
         # Nothing should have been persisted
         latest = await store.get_latest_snapshot("US")

@@ -27,5 +27,15 @@ class InMemoryMacroSnapshotStore(MacroSnapshotRepositoryContract):
             return None
         return max(candidates, key=lambda s: s.as_of_date)
 
+    async def list_recent(self, as_of_date: date, limit: int = 10) -> list[MacroSnapshotState]:
+        """Return up to *limit* snapshots on or before *as_of_date*, most recent first.
+
+        When multiple snapshots share the same ``as_of_date``, ties are broken
+        by ``snapshot_timestamp`` (most recent first).
+        """
+        candidates = [s for s in self._snapshots if s.as_of_date <= as_of_date]
+        candidates.sort(key=lambda s: (s.as_of_date, s.snapshot_timestamp), reverse=True)
+        return candidates[:limit]
+
     def all_snapshots(self) -> list[MacroSnapshotState]:
         return list(self._snapshots)

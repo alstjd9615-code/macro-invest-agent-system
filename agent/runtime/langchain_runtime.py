@@ -267,7 +267,7 @@ class LangChainAgentRuntime:
             response = self._reformat_signal_review(response, request, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.REVIEW_SIGNALS,
-            response=response,  # type: ignore[arg-type]
+            response=response,
         )
 
     async def _invoke_summarize_snapshot(
@@ -281,7 +281,7 @@ class LangChainAgentRuntime:
             response = self._reformat_snapshot_summary(response, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.SUMMARIZE_MACRO_SNAPSHOT,
-            response=response,  # type: ignore[arg-type]
+            response=response,
         )
 
     async def _invoke_compare_snapshots(
@@ -295,7 +295,7 @@ class LangChainAgentRuntime:
             response = self._reformat_comparison_summary(response, context_hint)
         return AgentRuntimeResult(
             operation=AgentOperation.COMPARE_SNAPSHOTS,
-            response=response,  # type: ignore[arg-type]
+            response=response,
         )
 
     # ------------------------------------------------------------------

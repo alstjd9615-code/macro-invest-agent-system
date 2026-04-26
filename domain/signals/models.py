@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 from domain.macro.models import MacroSnapshot
+from domain.signals.conflict import ConflictSurface
 from domain.signals.enums import SignalStrength, SignalType, TrendDirection
 
 
@@ -81,6 +82,55 @@ class SignalOutput(BaseModel):
     rule_results: dict[str, bool] = Field(
         default_factory=dict,
         description="Results of each rule evaluation (rule_name -> passed)",
+    )
+    asset_class: str = Field(
+        default="",
+        description=(
+            "Target asset class for this signal (e.g. 'equities', 'bonds', 'commodities'). "
+            "Empty for regime-level or multi-asset signals."
+        ),
+    )
+    supporting_regime: str = Field(
+        default="",
+        description="Regime label that grounds this signal (e.g. 'goldilocks', 'contraction').",
+    )
+    supporting_drivers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Macro factors that support this signal direction "
+            "(e.g. 'growth_accelerating', 'inflation_cooling')."
+        ),
+    )
+    conflicting_drivers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Macro factors that partially contradict or reduce confidence in this signal "
+            "(e.g. 'policy_restrictive', 'labor_weakening')."
+        ),
+    )
+    is_degraded: bool = Field(
+        default=False,
+        description=(
+            "True when this signal was derived from a degraded, stale, or low-confidence "
+            "regime.  Downstream consumers should render a degraded badge and interpret "
+            "the signal with increased caution."
+        ),
+    )
+    caveat: str | None = Field(
+        default=None,
+        description=(
+            "Analyst-facing caveat string explaining why this signal is degraded or should "
+            "be interpreted with reduced confidence.  None when is_degraded=False."
+        ),
+    )
+    conflict: ConflictSurface | None = Field(
+        default=None,
+        description=(
+            "Conflict Surface v1: analytical conflict descriptor for this signal. "
+            "Populated when signals are derived via the regime-grounded engine. "
+            "Distinct from is_degraded (which reflects data/freshness problems). "
+            "None in the legacy snapshot-based engine path."
+        ),
     )
 
 

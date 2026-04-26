@@ -6,8 +6,6 @@ factual fields and does not hallucinate unexpected fields.
 
 from __future__ import annotations
 
-import pytest
-
 from agent.prompts.templates import (
     render_signal_review_summary,
     render_snapshot_comparison_summary,
@@ -19,18 +17,18 @@ class TestSignalReviewPromptTemplate:
     """render_signal_review_summary regression tests."""
 
     def _render(self, **overrides: object) -> str:
-        defaults: dict[str, object] = dict(
-            signal_ids="bull_market, bear_market",
-            country="US",
-            signals_generated=3,
-            buy_signals=2,
-            sell_signals=1,
-            hold_signals=0,
-            dominant_direction="BUY",
-            engine_run_id="eng-001",
-            execution_time_ms="12.5",
-            context_summary="",
-        )
+        defaults: dict[str, object] = {
+            "signal_ids": "bull_market, bear_market",
+            "country": "US",
+            "signals_generated": 3,
+            "buy_signals": 2,
+            "sell_signals": 1,
+            "hold_signals": 0,
+            "dominant_direction": "BUY",
+            "engine_run_id": "eng-001",
+            "execution_time_ms": "12.5",
+            "context_summary": "",
+        }
         defaults.update(overrides)
         return render_signal_review_summary(**defaults)  # type: ignore[arg-type]
 
@@ -69,12 +67,12 @@ class TestSnapshotSummaryPromptTemplate:
     """render_snapshot_summary regression tests."""
 
     def _render(self, **overrides: object) -> str:
-        defaults: dict[str, object] = dict(
-            country="US",
-            features_count=5,
-            snapshot_timestamp="2026-01-01T00:00:00Z",
-            context_summary="",
-        )
+        defaults: dict[str, object] = {
+            "country": "US",
+            "features_count": 5,
+            "snapshot_timestamp": "2026-01-01T00:00:00Z",
+            "context_summary": "",
+        }
         defaults.update(overrides)
         return render_snapshot_summary(**defaults)  # type: ignore[arg-type]
 
@@ -101,14 +99,14 @@ class TestSnapshotComparisonPromptTemplate:
     """render_snapshot_comparison_summary regression tests."""
 
     def _render(self, **overrides: object) -> str:
-        defaults: dict[str, object] = dict(
-            country="US",
-            prior_snapshot_label="Q1-2026",
-            changed_count=3,
-            unchanged_count=2,
-            no_prior_count=0,
-            context_summary="",
-        )
+        defaults: dict[str, object] = {
+            "country": "US",
+            "prior_snapshot_label": "Q1-2026",
+            "changed_count": 3,
+            "unchanged_count": 2,
+            "no_prior_count": 0,
+            "context_summary": "",
+        }
         defaults.update(overrides)
         return render_snapshot_comparison_summary(**defaults)  # type: ignore[arg-type]
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -58,7 +59,7 @@ def _mock_macro_service(snapshot: MacroSnapshot | None = None) -> MagicMock:
 
 
 @pytest.fixture()
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     """Return a TestClient with a stubbed macro service."""
     svc = _mock_macro_service()
     app.dependency_overrides[get_macro_service] = lambda: svc
@@ -67,7 +68,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture()
-def client_with_snapshot(request: pytest.FixtureRequest) -> TestClient:
+def client_with_snapshot(request: pytest.FixtureRequest) -> Generator[TestClient, None, None]:
     """Return a TestClient with a custom snapshot."""
     snapshot = getattr(request, "param", _make_snapshot())
     svc = _mock_macro_service(snapshot)

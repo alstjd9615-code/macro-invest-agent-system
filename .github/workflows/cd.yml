@@ -1,63 +1,29 @@
 name: CD
+# CD is disabled — the project runs locally via Docker Compose only.
+# Remote deployment is not configured. See docs/deployment.md for the
+# manual local workflow.
+#
+# To re-enable: restore the `on:` block below and configure the required
+# GitHub secrets (DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH).
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-
-concurrency:
-  group: cd-main
-  cancel-in-progress: true
+    inputs:
+      confirm:
+        description: "Type 'yes' to confirm intentional manual run"
+        required: true
+        default: "no"
 
 jobs:
-  deploy:
-    name: Deploy on main
+  disabled:
+    name: CD disabled
     runs-on: ubuntu-latest
-    environment: production
+    permissions: {}
     steps:
-      - name: Validate required deployment secrets
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      - name: CD is not configured
         run: |
-          test -n "$DEPLOY_HOST" || (echo "Missing secret DEPLOY_HOST" && exit 1)
-          test -n "$DEPLOY_USER" || (echo "Missing secret DEPLOY_USER" && exit 1)
-          test -n "$DEPLOY_SSH_KEY" || (echo "Missing secret DEPLOY_SSH_KEY" && exit 1)
-          test -n "$DEPLOY_PATH" || (echo "Missing secret DEPLOY_PATH" && exit 1)
-
-      - name: Deploy via SSH + Docker Compose
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT != '' && secrets.DEPLOY_PORT || '22' }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-
-            git fetch --all --prune
-            git checkout main
-            git reset --hard origin/main
-
-            docker compose pull || true
-            docker compose up -d --build --remove-orphans
-
-            curl --fail --silent --show-error http://localhost:8000/health >/dev/null
-            curl --fail --silent --show-error http://localhost:8080/ >/dev/null
-
-      - name: Deployment summary
-        run: |
-          {
-            echo "## Deployment completed"
-            echo ""
-            echo "- Ref: \`${{ github.ref }}\`"
-            echo "- SHA: \`${{ github.sha }}\`"
-            echo "- Host: \`${{ secrets.DEPLOY_HOST }}\`"
-            echo "- Health checks: API (/health), Frontend (/)"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "CD is disabled. Deploy manually:"
+          echo "  git pull"
+          echo "  docker compose up -d --build"
+          echo "  docker compose ps"
+          exit 1

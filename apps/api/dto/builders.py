@@ -8,11 +8,17 @@ All functions are pure and deterministic.
 
 from __future__ import annotations
 
+from apps.api.dto.explanations import (
+    AnalystWorkflowDTO,
+    ReasoningStep,
+    WhatChangedDTO,
+)
 from apps.api.dto.signals import SignalSummaryDTO
 from apps.api.dto.snapshots import FeatureDeltaDTO, FeatureDTO
 from apps.api.dto.trust import DataAvailability, FreshnessStatus, SourceAttribution, TrustMetadata
 from domain.macro.comparison import FeatureDelta, SnapshotComparison
 from domain.macro.models import MacroFeature, MacroSnapshot
+from domain.macro.narrative_builder import RegimeNarrative
 from domain.signals.models import SignalOutput, SignalResult
 
 # ---------------------------------------------------------------------------
@@ -165,6 +171,18 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
     """Convert a domain :class:`~domain.signals.models.SignalOutput` to :class:`SignalSummaryDTO`."""
     rules_total = len(signal.rule_results)
     rules_passed = sum(1 for v in signal.rule_results.values() if v)
+
+    # Conflict surface fields — flatten from ConflictSurface if present
+    conflict_status = "clean"
+    is_mixed = False
+    conflict_note = None
+    quant_support_level = "unknown"
+    if signal.conflict is not None:
+        conflict_status = signal.conflict.conflict_status.value
+        is_mixed = signal.conflict.is_mixed
+        conflict_note = signal.conflict.conflict_note
+        quant_support_level = signal.conflict.quant_support_level
+
     return SignalSummaryDTO(
         signal_id=signal.signal_id,
         signal_type=str(signal.signal_type),
@@ -176,4 +194,222 @@ def signal_output_to_dto(signal: SignalOutput) -> SignalSummaryDTO:
         rule_results=signal.rule_results,
         rules_passed=rules_passed,
         rules_total=rules_total,
+        asset_class=signal.asset_class,
+        supporting_regime=signal.supporting_regime,
+        supporting_drivers=list(signal.supporting_drivers),
+        conflicting_drivers=list(signal.conflicting_drivers),
+        is_degraded=signal.is_degraded,
+        caveat=signal.caveat,
+        conflict_status=conflict_status,
+        is_mixed=is_mixed,
+        conflict_note=conflict_note,
+        quant_support_level=quant_support_level,
     )
+
+
+# ---------------------------------------------------------------------------
+# Explanation Engine v2 builders
+# ---------------------------------------------------------------------------
+
+_STATE_LABELS: dict[str, str] = {
+    "growth_state": "Growth",
+    "inflation_state": "Inflation",
+    "labor_state": "Labor",
+    "policy_state": "Policy",
+    "financial_conditions_state": "Financial Conditions",
+}
+
+
+def build_reasoning_chain(
+    narrative: RegimeNarrative,
+    conflict_status: str = "clean",
+    conflict_note: str | None = None,
+    quant_support_level: str = "unknown",
+) -> list[ReasoningStep]:
+    """Build a deterministic 6-step reasoning chain from a :class:`RegimeNarrative`.
+
+    The chain is always returned with exactly 6 steps in canonical order:
+    current_state → why → confidence → conflict → caveats → what_changed.
+
+    Args:
+        narrative: The :class:`~domain.macro.narrative_builder.RegimeNarrative` produced
+            by :func:`~domain.macro.narrative_builder.build_regime_narrative`.
+        conflict_status: Conflict/conviction status string from the signal's
+            ConflictSurface (default ``"clean"``).
+        conflict_note: Analyst-facing conflict explanation; ``None`` for clean signals.
+        quant_support_level: Quant support level label (strong / moderate / weak / unknown).
+
+    Returns:
+        List of exactly 6 :class:`ReasoningStep` objects.
+    """
+    ctx = narrative["regime_context"]
+    label = ctx.get("label", "unknown")
+    family = ctx.get("family", "unknown")
+    confidence = ctx.get("confidence", "unknown")
+    transition = ctx.get("transition", "initial")
+    transition_from_prior = ctx.get("transition_from_prior", "")
+
+    # Step 1 — current_state
+    state_parts = [
+        f"{human_label}: {ctx.get(state_key, 'unknown')}"
+        for state_key, human_label in _STATE_LABELS.items()
+        if state_key in ctx
+    ]
+    # Fall back to the rationale_points state lines when context doesn't carry states
+    if not state_parts:
+        state_parts = [
+            p for p in narrative["rationale_points"]
+            if any(sl in p for sl in _STATE_LABELS.values())
+        ]
+    why_detail = "; ".join(state_parts) if state_parts else "See rationale points."
+
+    # Step 3 — confidence detail
+    confidence_detail_map = {
+        "high": "All key indicators are fresh and non-conflicting.",
+        "medium": "Some indicators are late or partially missing.",
+        "low": "Significant data gaps, staleness, or conflicting signals present.",
+    }
+    confidence_detail = confidence_detail_map.get(confidence, "Confidence level uncertain.")
+
+    # Step 4 — conflict
+    conflict_value = conflict_status
+    conflict_detail = conflict_note
+    if conflict_detail is None and conflict_status != "clean":
+        conflict_detail = f"Quant support: {quant_support_level}."
+
+    # Step 5 — caveats
+    caveats = narrative.get("caveats", [])
+    if caveats:
+        caveats_value = f"{len(caveats)} caveat(s)"
+        caveats_detail = " | ".join(caveats)
+    else:
+        caveats_value = "none"
+        caveats_detail = None
+
+    # Step 6 — what_changed
+    if transition == "initial" or not transition_from_prior:
+        what_changed_value = "initial (no prior baseline)"
+        what_changed_detail = "No prior regime available — transition analysis cannot be performed."
+    else:
+        what_changed_value = f"{transition} from {transition_from_prior}"
+        what_changed_detail = (
+            f"Regime transitioned from '{transition_from_prior}' "
+            f"({transition}). Current label: '{label}'."
+        )
+
+    return [
+        ReasoningStep(
+            step=1,
+            key="current_state",
+            label="Current State",
+            value=f"{label} ({family} family)",
+            detail=narrative.get("summary", "")[:200] or None,
+        ),
+        ReasoningStep(
+            step=2,
+            key="why",
+            label="Why",
+            value=f"Regime: {label}",
+            detail=why_detail,
+        ),
+        ReasoningStep(
+            step=3,
+            key="confidence",
+            label="Confidence",
+            value=confidence,
+            detail=confidence_detail,
+        ),
+        ReasoningStep(
+            step=4,
+            key="conflict",
+            label="Conflict",
+            value=conflict_value,
+            detail=conflict_detail,
+        ),
+        ReasoningStep(
+            step=5,
+            key="caveats",
+            label="Caveats",
+            value=caveats_value,
+            detail=caveats_detail,
+        ),
+        ReasoningStep(
+            step=6,
+            key="what_changed",
+            label="What Changed",
+            value=what_changed_value,
+            detail=what_changed_detail,
+        ),
+    ]
+
+
+def build_what_changed(narrative: RegimeNarrative) -> WhatChangedDTO | None:
+    """Build a :class:`WhatChangedDTO` from a :class:`RegimeNarrative`.
+
+    Returns ``None`` when this is an initial regime (no prior baseline).
+
+    Note: This builder derives change metadata from the ``RegimeNarrative`` context,
+    which carries transition type and prior label but not the full prior ``MacroRegime``
+    object.  For a complete change analysis with full severity classification, use
+    :func:`~domain.macro.change_detection.detect_regime_change` with the actual
+    domain objects (as the compare endpoint does).
+
+    Args:
+        narrative: The :class:`~domain.macro.narrative_builder.RegimeNarrative` to
+            derive ``what_changed`` from.
+
+    Returns:
+        :class:`WhatChangedDTO` when transition data is available; ``None`` for initial regimes.
+    """
+    ctx = narrative["regime_context"]
+    transition = ctx.get("transition", "initial")
+    transition_from_prior = ctx.get("transition_from_prior", "")
+
+    if transition == "initial" or not transition_from_prior:
+        return None
+
+    changed = transition not in {"unchanged", "initial", "unknown"}
+
+    # Derive changed_dimensions and confidence_direction from transition type.
+    # This is a best-effort approximation from the narrative context only.
+    # The compare endpoint provides a more complete delta via detect_regime_change().
+    changed_dimensions: list[str] = []
+    confidence_direction = "unchanged"
+    severity = "unchanged"
+
+    if transition == "shift":
+        changed_dimensions.append("label")
+        severity = "moderate"  # minimum for a label change; compare endpoint refines further
+    elif transition == "strengthening":
+        changed_dimensions.append("confidence")
+        confidence_direction = "improved"
+        severity = "minor"
+    elif transition == "weakening":
+        changed_dimensions.append("confidence")
+        confidence_direction = "weakened"
+        severity = "minor"
+    elif changed:
+        severity = "minor"
+
+    return WhatChangedDTO(
+        prior_regime_label=transition_from_prior or None,
+        transition_type=transition,
+        changed=changed,
+        severity=severity,
+        changed_dimensions=changed_dimensions,
+        confidence_direction=confidence_direction,
+    )
+
+
+def build_analyst_workflow(reasoning_chain: list[ReasoningStep]) -> AnalystWorkflowDTO:
+    """Wrap a reasoning chain in an :class:`AnalystWorkflowDTO` for UI rendering.
+
+    Args:
+        reasoning_chain: The ordered list of :class:`ReasoningStep` objects from
+            :func:`build_reasoning_chain`.
+
+    Returns:
+        :class:`AnalystWorkflowDTO` with the same steps.
+    """
+    return AnalystWorkflowDTO(steps=list(reasoning_chain))
+

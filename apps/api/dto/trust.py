@@ -126,3 +126,11 @@ class TrustMetadata(BaseModel, extra="forbid"):
             "None for non-comparison endpoints"
         ),
     )
+    degraded_reason: str | None = Field(
+        default=None,
+        description=(
+            "Machine-readable reason code explaining why this response is degraded. "
+            "Examples: 'regime_unavailable_fallback_engine_used', "
+            "'stale_data_partial_indicators'. None when not degraded."
+        ),
+    )

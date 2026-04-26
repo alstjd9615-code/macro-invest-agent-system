@@ -17,6 +17,7 @@ from domain.macro.snapshot import (
     MacroSnapshotState,
     PolicyState,
 )
+from domain.quant.models import QuantScoreBundle
 from pipelines.ingestion.models import FreshnessStatus
 
 
@@ -116,8 +117,38 @@ def build_regime_rationale(snapshot: MacroSnapshotState, label: RegimeLabel) -> 
 def derive_regime_confidence(
     snapshot: MacroSnapshotState,
     label: RegimeLabel,
+    quant_scores: QuantScoreBundle | None = None,
 ) -> RegimeConfidence:
-    """Derive confidence from freshness, degraded status, and state coherence."""
+    """Derive confidence from freshness, degraded status, state coherence, and quant scores.
+
+    Confidence derivation order
+    ---------------------------
+    1. Hard floor conditions — always LOW regardless of quant support:
+       - critical degraded status (``missing``, ``source_unavailable``)
+       - stale or unknown freshness
+    2. Partial / late conditions — floor at MEDIUM:
+       - ``degraded_status = partial``
+       - ``freshness_status = late``
+    3. Unknown category states — one unknown → MEDIUM; two or more → LOW.
+    4. Non-directional labels — ``mixed`` / ``unclear`` → always LOW.
+    5. Quant score adjustment (applied only when quant_scores provided and
+       preliminary confidence is HIGH or MEDIUM):
+       - ``breadth < 0.60`` (fewer than 3 of 5 dimensions known) →
+         cap at MEDIUM, cannot be HIGH.
+       - ``overall_support < 0.40`` → downgrade HIGH → MEDIUM; MEDIUM → LOW
+         (quant shows insufficient positive support for the current label).
+       - ``overall_support >= 0.65`` and all states clean → confirm HIGH.
+
+    Args:
+        snapshot: The macro snapshot used to derive this regime.
+        label: The resolved regime label.
+        quant_scores: Optional :class:`~domain.quant.models.QuantScoreBundle`.
+            When provided, quant signals may further adjust confidence.
+
+    Returns:
+        :class:`RegimeConfidence` — ``high``, ``medium``, or ``low``.
+    """
+    # --- Hard floor conditions (always LOW) ---
     if snapshot.degraded_status in {DegradedStatus.MISSING, DegradedStatus.SOURCE_UNAVAILABLE}:
         return RegimeConfidence.LOW
     if snapshot.freshness_status in {FreshnessStatus.STALE, FreshnessStatus.UNKNOWN}:
@@ -125,11 +156,13 @@ def derive_regime_confidence(
 
     confidence = RegimeConfidence.HIGH
 
+    # --- Partial / late → floor at MEDIUM ---
     if snapshot.degraded_status == DegradedStatus.PARTIAL:
         confidence = RegimeConfidence.MEDIUM
     if snapshot.freshness_status == FreshnessStatus.LATE:
         confidence = RegimeConfidence.MEDIUM
 
+    # --- Unknown category states ---
     unknown_count = sum(
         1
         for state in (
@@ -144,10 +177,116 @@ def derive_regime_confidence(
     if unknown_count > 0:
         confidence = RegimeConfidence.MEDIUM if unknown_count == 1 else RegimeConfidence.LOW
 
+    # --- Non-directional labels always LOW ---
     if label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
         return RegimeConfidence.LOW
+
+    # --- Quant score adjustment (Chunk 2 addition) ---
+    if quant_scores is not None and confidence != RegimeConfidence.LOW:
+        if quant_scores.breadth < 0.60 and confidence == RegimeConfidence.HIGH:
+            # Insufficient dimension coverage — cannot support HIGH confidence
+            confidence = RegimeConfidence.MEDIUM
+        if quant_scores.overall_support < 0.40:
+            # Weak quant support — downgrade one level
+            if confidence == RegimeConfidence.HIGH:
+                confidence = RegimeConfidence.MEDIUM
+            elif confidence == RegimeConfidence.MEDIUM:
+                confidence = RegimeConfidence.LOW
+
     return confidence
 
 
 def derive_regime_missing_inputs(snapshot: MacroSnapshotState) -> list[str]:
     return list(snapshot.missing_indicators)
+
+
+def derive_regime_warnings(
+    snapshot: MacroSnapshotState,
+    label: RegimeLabel,
+    confidence: RegimeConfidence,
+    missing_inputs: list[str],
+    is_seeded: bool = False,
+) -> list[str]:
+    """Derive analyst-facing warning strings from snapshot and regime state.
+
+    Each warning is a concise, human-readable sentence suitable for direct
+    rendering as a badge or tooltip in the product UI.  Warnings do not
+    duplicate the ``rationale_summary``; they specifically flag degraded,
+    stale, missing-input, or bootstrap conditions that require analyst
+    attention.
+
+    Args:
+        snapshot: The macro snapshot state used to derive this regime.
+        label: The resolved regime label.
+        confidence: The derived regime confidence level.
+        missing_inputs: Indicators that were absent when the regime was built.
+        is_seeded: True when this regime was created by the startup bootstrap
+            seeder from synthetic data.
+
+    Returns:
+        Ordered list of warning strings.  Empty list when the regime is
+        fully healthy and not synthetic.
+    """
+    warnings: list[str] = []
+
+    if is_seeded:
+        warnings.append(
+            "Bootstrap data: this regime was generated from synthetic seed data "
+            "and does not reflect a real ingestion pipeline run."
+        )
+
+    if snapshot.freshness_status == FreshnessStatus.STALE:
+        warnings.append(
+            "Stale data: underlying indicators are older than the expected "
+            "update window.  This regime classification may be outdated."
+        )
+    elif snapshot.freshness_status == FreshnessStatus.LATE:
+        warnings.append(
+            "Late data: some indicators have not been updated within their "
+            "expected window.  Regime accuracy may be reduced."
+        )
+    elif snapshot.freshness_status == FreshnessStatus.UNKNOWN:
+        warnings.append(
+            "Data freshness unknown: unable to confirm whether underlying "
+            "indicators are current.  Treat this regime with caution."
+        )
+
+    if snapshot.degraded_status == DegradedStatus.MISSING:
+        warnings.append(
+            "Critical data missing: the regime was derived from a severely "
+            "incomplete snapshot.  Classification accuracy is significantly reduced."
+        )
+    elif snapshot.degraded_status == DegradedStatus.PARTIAL:
+        warnings.append(
+            "Partial data: some indicators were missing when this regime was "
+            "built.  Classification may be less reliable than usual."
+        )
+    elif snapshot.degraded_status == DegradedStatus.SOURCE_UNAVAILABLE:
+        warnings.append(
+            "Data source unavailable: regime reflects the last available "
+            "snapshot.  Real-time conditions may have changed."
+        )
+
+    if missing_inputs:
+        count = len(missing_inputs)
+        names = ", ".join(missing_inputs[:3])
+        suffix = f" and {count - 3} more" if count > 3 else ""
+        warnings.append(
+            f"Missing {count} indicator(s): {names}{suffix}. "
+            "Regime derived from partial evidence."
+        )
+
+    if confidence == RegimeConfidence.LOW:
+        warnings.append(
+            "Low confidence: conflicting or insufficient signals reduce the "
+            "reliability of this regime label.  Do not base high-conviction "
+            "decisions on this classification alone."
+        )
+
+    if label in {RegimeLabel.MIXED, RegimeLabel.UNCLEAR}:
+        warnings.append(
+            "Non-directional regime (mixed/unclear): no asset-level signals "
+            "can be derived with meaningful confidence from this classification."
+        )
+
+    return warnings

@@ -9,6 +9,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, model_validator
 
 from domain.macro.snapshot import DegradedStatus
+from domain.quant.models import QuantScoreBundle
 from pipelines.ingestion.models import FreshnessStatus
 
 
@@ -88,11 +89,38 @@ class MacroRegime(BaseModel, extra="forbid"):
     degraded_status: DegradedStatus = Field(default=DegradedStatus.UNKNOWN)
     missing_inputs: list[str] = Field(default_factory=list)
 
+    quant_scores: QuantScoreBundle | None = Field(
+        default=None,
+        description=(
+            "Quant Scoring Engine v1 output for this regime's supporting snapshot. "
+            "Present when the regime was built via MacroRegimeService (not bootstrap/seed). "
+            "Downstream consumers (signal confidence, conflict surface) should use this "
+            "to refine their outputs rather than relying solely on categorical states."
+        ),
+    )
+
     transition: RegimeTransition = Field(default_factory=RegimeTransition)
     rationale_summary: str = Field(default="")
+    warnings: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Pre-computed analyst-facing warnings summarising degraded, stale, "
+            "missing-input, or bootstrap conditions.  Populated at build time so "
+            "downstream API and UI layers do not need to re-derive these states "
+            "from multiple individual fields."
+        ),
+    )
+    metadata: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Arbitrary key/value metadata attached at regime creation time. "
+            "Seeded/bootstrap regimes carry: seeded='true', source='synthetic_seed'. "
+            "Production regimes leave this empty."
+        ),
+    )
 
     @model_validator(mode="after")
-    def validate_label_family_alignment(self) -> "MacroRegime":
+    def validate_label_family_alignment(self) -> MacroRegime:
         expected_family = regime_family_for_label(self.regime_label)
         if self.regime_family != expected_family:
             msg = (

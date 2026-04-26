@@ -11,12 +11,15 @@ from domain.macro.regime_mapping import (
     build_regime_rationale,
     derive_regime_confidence,
     derive_regime_missing_inputs,
+    derive_regime_warnings,
     map_snapshot_to_regime,
 )
 from domain.macro.regime_transition import derive_regime_transition
+from domain.quant.scoring import score_snapshot
+from services.interfaces import RegimeServiceInterface
 
 
-class MacroRegimeService:
+class MacroRegimeService(RegimeServiceInterface):
     """Build deterministic macro regimes for a selected as-of date."""
 
     def __init__(
@@ -33,6 +36,11 @@ class MacroRegimeService:
             raise ValueError(f"No snapshot available on or before {as_of_date.isoformat()}")
 
         label, family = map_snapshot_to_regime(snapshot)
+        quant_scores = score_snapshot(snapshot)
+        confidence = derive_regime_confidence(
+            snapshot=snapshot, label=label, quant_scores=quant_scores
+        )
+        missing_inputs = derive_regime_missing_inputs(snapshot)
         return MacroRegime(
             as_of_date=snapshot.as_of_date,
             regime_label=label,
@@ -45,11 +53,19 @@ class MacroRegimeService:
                 "policy_state": snapshot.policy_state.value,
                 "financial_conditions_state": snapshot.financial_conditions_state.value,
             },
-            confidence=derive_regime_confidence(snapshot=snapshot, label=label),
+            confidence=confidence,
             freshness_status=snapshot.freshness_status,
             degraded_status=snapshot.degraded_status,
-            missing_inputs=derive_regime_missing_inputs(snapshot),
+            missing_inputs=missing_inputs,
+            quant_scores=quant_scores,
             rationale_summary=build_regime_rationale(snapshot=snapshot, label=label),
+            warnings=derive_regime_warnings(
+                snapshot=snapshot,
+                label=label,
+                confidence=confidence,
+                missing_inputs=missing_inputs,
+                is_seeded=False,
+            ),
         )
 
     async def build_and_save_regime(self, as_of_date: date) -> MacroRegime:
@@ -81,3 +97,13 @@ class MacroRegimeService:
             current.as_of_date - timedelta(days=1)
         )
         return current, previous
+
+    async def list_recent_regimes(
+        self,
+        as_of_date: date,
+        limit: int = 10,
+    ) -> list[MacroRegime]:
+        if self._regime_repository is None:
+            raise ValueError("Regime repository is not configured")
+        return await self._regime_repository.list_recent(as_of_date=as_of_date, limit=limit)
+

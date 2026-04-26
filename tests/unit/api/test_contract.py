@@ -14,18 +14,17 @@ and that important edge states are explicitly surfaced.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.api.dependencies import get_macro_service, get_signal_service
+from adapters.repositories.in_memory_explanation_store import InMemoryExplanationStore
+from apps.api.dependencies import get_explanation_repository, get_macro_service, get_signal_service
 from apps.api.main import app
-from apps.api.routers.explanations import (
-    build_and_register_explanation,
-    clear_explanation_store,
-)
+from apps.api.routers.explanations import build_and_register_explanation
 from apps.api.routers.sessions import clear_session_store, create_session
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
@@ -65,12 +64,18 @@ def _signal_result(signals: list[SignalOutput] | None = None, success: bool = Tr
     )
 
 
+@pytest.fixture()
+def explanation_store() -> InMemoryExplanationStore:
+    return InMemoryExplanationStore()
+
+
 @pytest.fixture(autouse=True)
-def _clean_stores() -> None:
-    clear_explanation_store()
+def _clean_stores(explanation_store: InMemoryExplanationStore) -> Generator[None, None, None]:
+    app.dependency_overrides[get_explanation_repository] = lambda: explanation_store
     clear_session_store()
     yield
-    clear_explanation_store()
+    app.dependency_overrides.pop(get_explanation_repository, None)
+    explanation_store.clear()
     clear_session_store()
 
 
@@ -128,8 +133,10 @@ class TestTrustBlockAlwaysPresent:
         finally:
             app.dependency_overrides.clear()
 
-    def test_explanation_has_trust(self) -> None:
-        build_and_register_explanation("run-t", "sig-t", "summary", [])
+    def test_explanation_has_trust(
+        self, explanation_store: InMemoryExplanationStore
+    ) -> None:
+        build_and_register_explanation("run-t", "sig-t", "summary", [], repository=explanation_store)
         tc = TestClient(app)
         resp = tc.get("/api/explanations/run-t:sig-t")
         assert resp.status_code == 200
@@ -264,8 +271,8 @@ class TestDegradedState:
             resp = tc.get("/api/signals/latest", params={"country": "US"})
             assert resp.status_code == 200
             trust = resp.json()["trust"]
-            # run_id is empty → our builder sees success=False
-            assert trust["availability"] in ("unavailable", "partial")
+            # run_id is empty → our builder sees success=False or regime unavailable
+            assert trust["availability"] in ("unavailable", "partial", "degraded")
         finally:
             app.dependency_overrides.clear()
 

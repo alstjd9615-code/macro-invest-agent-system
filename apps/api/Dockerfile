@@ -1,23 +1,23 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1
+FROM python:3.12-slim AS base
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-COPY adapters ./adapters
-COPY agent ./agent
-COPY apps ./apps
-COPY core ./core
-COPY domain ./domain
-COPY mcp ./mcp
-COPY pipelines ./pipelines
-COPY services ./services
-COPY storage ./storage
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.4.29 /uv /usr/local/bin/uv
 
-RUN pip install --no-cache-dir .
+# Copy dependency manifests first for layer caching
+COPY pyproject.toml uv.lock* ./
+
+# Install dependencies (no dev extras)
+RUN uv sync --no-dev
+
+# Copy application source
+COPY . .
 
 EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

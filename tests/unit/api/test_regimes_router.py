@@ -86,3 +86,32 @@ class TestRegimesRouter:
             assert payload["prior_regime_label"] == "slowdown"
         finally:
             app.dependency_overrides.clear()
+
+    def test_compare_returns_404_when_no_current_regime(self) -> None:
+        svc = MagicMock()
+        svc.compare_latest_with_prior = AsyncMock(
+            side_effect=ValueError("No regime available on or before 2026-02-01")
+        )
+        app.dependency_overrides[get_regime_service] = lambda: svc
+        try:
+            tc = TestClient(app)
+            resp = tc.get("/api/regimes/compare")
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_compare_no_prior_baseline_available(self) -> None:
+        current = _regime(transition_type=RegimeTransitionType.UNCHANGED)
+        svc = MagicMock()
+        svc.compare_latest_with_prior = AsyncMock(return_value=(current, None))
+        app.dependency_overrides[get_regime_service] = lambda: svc
+        try:
+            tc = TestClient(app)
+            resp = tc.get("/api/regimes/compare")
+            assert resp.status_code == 200
+            payload = resp.json()
+            assert payload["baseline_available"] is False
+            assert payload["prior_regime_label"] is None
+            assert payload["prior_confidence"] is None
+        finally:
+            app.dependency_overrides.clear()

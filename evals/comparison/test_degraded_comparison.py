@@ -12,7 +12,7 @@ import pytest
 from agent.mcp_adapter import MCPAdapter
 from agent.runtime.agent_runtime import AgentOperation
 from agent.runtime.langchain_runtime import LangChainAgentRuntime
-from agent.schemas import PriorFeatureInput, SnapshotComparisonRequest
+from agent.schemas import PriorFeatureInput, SnapshotComparisonRequest, SnapshotComparisonResponse
 from agent.service import AgentService
 from services.macro_service import MacroService
 from services.signal_service import SignalService
@@ -70,6 +70,7 @@ class TestDegradedComparisonEval:
         result = await runtime.invoke(request)
         assert result.success is True
         response = result.response
+        assert isinstance(response, SnapshotComparisonResponse)
         assert response.no_prior_count >= 0  # may be > 0 since we only gave one prior
         assert response.summary != ""
 

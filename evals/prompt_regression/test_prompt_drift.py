@@ -20,8 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-
-import pytest
+from typing import cast
 
 from agent.prompts.templates import (
     render_signal_review_summary,
@@ -34,31 +33,31 @@ _FIXTURES_DIR = Path(__file__).parent / "fixtures"
 _HASH_FIXTURE = _FIXTURES_DIR / "prompt_hashes.json"
 
 # Canonical inputs — these must NOT change unless templates intentionally change.
-_CANONICAL_SIGNAL_REVIEW_KWARGS = dict(
-    signal_ids="bull_market, bear_market",
-    country="US",
-    signals_generated=3,
-    buy_signals=2,
-    sell_signals=1,
-    hold_signals=0,
-    dominant_direction="BUY",
-    engine_run_id="eng-fixture-001",
-    execution_time_ms="12.3",
-)
+_CANONICAL_SIGNAL_REVIEW_KWARGS = {
+    "signal_ids": "bull_market, bear_market",
+    "country": "US",
+    "signals_generated": 3,
+    "buy_signals": 2,
+    "sell_signals": 1,
+    "hold_signals": 0,
+    "dominant_direction": "BUY",
+    "engine_run_id": "eng-fixture-001",
+    "execution_time_ms": "12.3",
+}
 
-_CANONICAL_SNAPSHOT_SUMMARY_KWARGS = dict(
-    country="US",
-    features_count=5,
-    snapshot_timestamp="2026-01-01T00:00:00Z",
-)
+_CANONICAL_SNAPSHOT_SUMMARY_KWARGS = {
+    "country": "US",
+    "features_count": 5,
+    "snapshot_timestamp": "2026-01-01T00:00:00Z",
+}
 
-_CANONICAL_COMPARISON_SUMMARY_KWARGS = dict(
-    country="US",
-    prior_snapshot_label="Q1-2026",
-    changed_count=3,
-    unchanged_count=2,
-    no_prior_count=0,
-)
+_CANONICAL_COMPARISON_SUMMARY_KWARGS = {
+    "country": "US",
+    "prior_snapshot_label": "Q1-2026",
+    "changed_count": 3,
+    "unchanged_count": 2,
+    "no_prior_count": 0,
+}
 
 
 def _sha256(text: str) -> str:
@@ -66,14 +65,14 @@ def _sha256(text: str) -> str:
 
 
 def _load_fixture_hashes() -> dict[str, str]:
-    return json.loads(_HASH_FIXTURE.read_text())
+    return cast(dict[str, str], json.loads(_HASH_FIXTURE.read_text()))
 
 
 class TestPromptDrift:
     """Prompt templates produce stable output for fixed canonical inputs."""
 
     def test_signal_review_hash_unchanged(self) -> None:
-        rendered = render_signal_review_summary(**_CANONICAL_SIGNAL_REVIEW_KWARGS)
+        rendered = render_signal_review_summary(**_CANONICAL_SIGNAL_REVIEW_KWARGS)  # type: ignore[arg-type]
         actual_hash = _sha256(rendered)
         expected_hash = _load_fixture_hashes()["signal_review"]
         assert actual_hash == expected_hash, (
@@ -85,7 +84,7 @@ class TestPromptDrift:
         )
 
     def test_snapshot_summary_hash_unchanged(self) -> None:
-        rendered = render_snapshot_summary(**_CANONICAL_SNAPSHOT_SUMMARY_KWARGS)
+        rendered = render_snapshot_summary(**_CANONICAL_SNAPSHOT_SUMMARY_KWARGS)  # type: ignore[arg-type]
         actual_hash = _sha256(rendered)
         expected_hash = _load_fixture_hashes()["snapshot_summary"]
         assert actual_hash == expected_hash, (
@@ -97,7 +96,7 @@ class TestPromptDrift:
         )
 
     def test_comparison_summary_hash_unchanged(self) -> None:
-        rendered = render_snapshot_comparison_summary(**_CANONICAL_COMPARISON_SUMMARY_KWARGS)
+        rendered = render_snapshot_comparison_summary(**_CANONICAL_COMPARISON_SUMMARY_KWARGS)  # type: ignore[arg-type]
         actual_hash = _sha256(rendered)
         expected_hash = _load_fixture_hashes()["comparison_summary"]
         assert actual_hash == expected_hash, (
@@ -111,7 +110,7 @@ class TestPromptDrift:
     def test_signal_review_with_is_degraded_context_does_not_hallucinate(self) -> None:
         """Context hint does not appear in the human message (only in system)."""
         rendered = render_signal_review_summary(
-            **_CANONICAL_SIGNAL_REVIEW_KWARGS,
+            **_CANONICAL_SIGNAL_REVIEW_KWARGS,  # type: ignore[arg-type]
             context_summary="is_degraded=True",
         )
         # The context hint is injected into the SYSTEM message, not the human message.
@@ -123,7 +122,7 @@ class TestPromptDrift:
 
     def test_snapshot_summary_with_is_degraded_context_does_not_hallucinate(self) -> None:
         rendered = render_snapshot_summary(
-            **_CANONICAL_SNAPSHOT_SUMMARY_KWARGS,
+            **_CANONICAL_SNAPSHOT_SUMMARY_KWARGS,  # type: ignore[arg-type]
             context_summary="is_degraded=True, stale data warning",
         )
         assert "is_degraded=True" not in rendered
@@ -132,7 +131,7 @@ class TestPromptDrift:
 
     def test_comparison_with_is_degraded_context_does_not_hallucinate(self) -> None:
         rendered = render_snapshot_comparison_summary(
-            **_CANONICAL_COMPARISON_SUMMARY_KWARGS,
+            **_CANONICAL_COMPARISON_SUMMARY_KWARGS,  # type: ignore[arg-type]
             context_summary="degraded snapshot, partial data",
         )
         assert "degraded snapshot" not in rendered

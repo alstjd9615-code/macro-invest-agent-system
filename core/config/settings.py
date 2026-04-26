@@ -152,6 +152,20 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Startup seeder
+    # ------------------------------------------------------------------
+
+    seed_on_startup: bool = Field(
+        default=True,
+        description=(
+            "When True, the startup seeder runs on application boot to ensure the "
+            "in-memory regime store is populated with synthetic bootstrap data. "
+            "Set to False in production environments that use a real ingestion pipeline. "
+            "Recommendation: True for local/dev, False for staging/production."
+        ),
+    )
+
+    # ------------------------------------------------------------------
     # Convenience helpers
     # ------------------------------------------------------------------
 
