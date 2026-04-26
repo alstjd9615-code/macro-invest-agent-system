@@ -24,6 +24,7 @@ from functools import lru_cache
 from fastapi import Depends
 
 from adapters.repositories.in_memory_alert_store import InMemoryAlertStore
+from adapters.repositories.in_memory_event_store import InMemoryEventStore
 from adapters.repositories.in_memory_explanation_store import InMemoryExplanationStore
 from adapters.repositories.in_memory_macro_regime_store import InMemoryMacroRegimeStore
 from adapters.repositories.in_memory_macro_snapshot_store import InMemoryMacroSnapshotStore
@@ -36,6 +37,7 @@ from services.macro_regime_service import MacroRegimeService
 from services.macro_service import MacroService
 from services.signal_service import SignalService
 from storage.repositories.alert_repository import AlertRepositoryInterface
+from storage.repositories.event_repository import EventRepositoryInterface
 from storage.repositories.explanation_repository import ExplanationRepositoryInterface
 
 
@@ -83,6 +85,12 @@ def _alert_store_singleton() -> InMemoryAlertStore:
 
 
 @lru_cache(maxsize=1)
+def _event_store_singleton() -> InMemoryEventStore:
+    """Return the shared in-memory external event store."""
+    return InMemoryEventStore()
+
+
+@lru_cache(maxsize=1)
 def _explanation_store_singleton() -> InMemoryExplanationStore:
     """Return the shared in-memory explanation store.
 
@@ -127,6 +135,17 @@ def get_alert_repository() -> AlertRepositoryInterface:
     return _alert_store_singleton()
 
 
+def get_event_repository() -> EventRepositoryInterface:
+    """FastAPI dependency: provide the shared external event repository.
+
+    Returns the :class:`~adapters.repositories.in_memory_event_store.InMemoryEventStore`
+    singleton.  Override in tests with::
+
+        app.dependency_overrides[get_event_repository] = lambda: my_test_store
+    """
+    return _event_store_singleton()
+
+
 def get_explanation_repository() -> ExplanationRepositoryInterface:
     """FastAPI dependency: provide the shared explanation repository.
 
@@ -145,6 +164,7 @@ def get_explanation_repository() -> ExplanationRepositoryInterface:
 # Re-export for convenience
 __all__ = [
     "get_alert_repository",
+    "get_event_repository",
     "get_macro_service",
     "get_signal_service",
     "get_regime_service",

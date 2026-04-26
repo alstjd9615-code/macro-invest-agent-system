@@ -17,6 +17,8 @@ Exposes:
 - ``GET /api/alerts/{id}``                  — alert event by ID.
 - ``PATCH /api/alerts/{id}/acknowledge``    — mark alert as acknowledged (analyst-facing).
 - ``PATCH /api/alerts/{id}/snooze``         — snooze alert until a datetime (analyst-facing).
+- ``GET /api/events/recent``               — recent normalized external events (queryable by type/status/region/time).
+- ``GET /api/events/{id}``                 — external event by ID.
 - ``GET /api/sessions/{id}``               — session context by ID (analyst read).
 
 Usage::
@@ -39,6 +41,7 @@ from apps.api.dependencies import (
     _snapshot_store_singleton,
 )
 from apps.api.routers import alerts as alerts_router
+from apps.api.routers import events as events_router
 from apps.api.routers import explanations as explanations_router
 from apps.api.routers import regimes as regimes_router
 from apps.api.routers import sessions as sessions_router
@@ -135,6 +138,7 @@ app.include_router(explanations_router.router)
 app.include_router(sessions_router.router)
 app.include_router(regimes_router.router)
 app.include_router(alerts_router.router)
+app.include_router(events_router.router)
 
 
 # ---------------------------------------------------------------------------
