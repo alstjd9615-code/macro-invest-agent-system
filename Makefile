@@ -47,7 +47,7 @@ test-unit: ## Run unit tests for core and domain layers
 test-contract: ## Run MCP contract and schema tests
 	uv run pytest tests/mcp/ -v
 
-up: ## Start local infrastructure (postgres + minio)
+up: ## Start local stack (infra + API + frontend + observability)
 	docker compose up -d
 
 down: ## Stop local infrastructure

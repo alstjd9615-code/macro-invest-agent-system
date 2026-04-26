@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from apps.api.dependencies import get_macro_service, get_signal_service
 from apps.api.main import app
+from apps.api.routers.explanations import clear_explanation_store
 from domain.macro.enums import DataFrequency, MacroIndicatorType, MacroSourceType
 from domain.macro.models import MacroFeature, MacroSnapshot
 from domain.signals.enums import SignalStrength, SignalType, TrendDirection
@@ -63,6 +64,7 @@ def _make_signal_result(signals: list[SignalOutput] | None = None) -> SignalResu
 
 @pytest.fixture()
 def client() -> TestClient:
+    clear_explanation_store()
     macro_svc = MagicMock()
     macro_svc.get_snapshot = AsyncMock(return_value=_make_snapshot())
     signal_svc = MagicMock()
@@ -71,10 +73,12 @@ def client() -> TestClient:
     app.dependency_overrides[get_signal_service] = lambda: signal_svc
     yield TestClient(app)
     app.dependency_overrides.clear()
+    clear_explanation_store()
 
 
 @pytest.fixture()
 def client_empty_signals() -> TestClient:
+    clear_explanation_store()
     macro_svc = MagicMock()
     macro_svc.get_snapshot = AsyncMock(return_value=_make_snapshot())
     signal_svc = MagicMock()
@@ -83,6 +87,7 @@ def client_empty_signals() -> TestClient:
     app.dependency_overrides[get_signal_service] = lambda: signal_svc
     yield TestClient(app)
     app.dependency_overrides.clear()
+    clear_explanation_store()
 
 
 # ---------------------------------------------------------------------------
@@ -192,3 +197,11 @@ class TestSignalsLatest:
             assert resp.status_code == 502
         finally:
             app.dependency_overrides.clear()
+
+    def test_latest_signals_registers_explanation(self, client: TestClient) -> None:
+        latest = client.get("/api/signals/latest", params={"country": "US"})
+        run_id = latest.json()["run_id"]
+        strongest = latest.json()["strongest_signal_id"]
+
+        explanation = client.get(f"/api/explanations/{run_id}:{strongest}")
+        assert explanation.status_code == 200
