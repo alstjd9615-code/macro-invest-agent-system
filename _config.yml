@@ -1,0 +1,20 @@
+title: macro-invest-agent-system
+description: Multi-engine macroeconomic and market analysis system for investment support
+theme: jekyll-theme-cayman
+
+include:
+  - docs
+
+exclude:
+  - .venv
+  - uv.lock
+  - backlog
+  - logs
+  - tests
+  - deploy
+  - mcp
+  - "*.py"
+  - "*.toml"
+  - "*.lock"
+  - Makefile
+  - docker-compose.yml
