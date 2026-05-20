@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from domain.events.enums import (
     ExternalEventFreshness,
     ExternalEventStatus,
@@ -18,7 +16,6 @@ from domain.events.normalizer import (
     infer_reliability_tier,
     normalize_external_event,
 )
-
 
 # ---------------------------------------------------------------------------
 # infer_reliability_tier
