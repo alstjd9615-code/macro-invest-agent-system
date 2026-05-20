@@ -206,6 +206,4 @@ class NormalizedExternalEvent(BaseModel, extra="forbid"):
         """
         if self.status == ExternalEventStatus.DUPLICATE:
             return False
-        if self.status == ExternalEventStatus.DEGRADED and self.is_stale():
-            return False
-        return True
+        return not (self.status == ExternalEventStatus.DEGRADED and self.is_stale())

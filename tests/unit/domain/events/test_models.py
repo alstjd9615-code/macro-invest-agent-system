@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from pydantic import ValidationError
 
 from domain.events.enums import (
     ExternalEventFreshness,
@@ -13,7 +14,6 @@ from domain.events.enums import (
     SourceReliabilityTier,
 )
 from domain.events.models import NormalizedExternalEvent, compute_event_freshness
-
 
 # ---------------------------------------------------------------------------
 # compute_event_freshness
@@ -139,7 +139,7 @@ class TestNormalizedExternalEvent:
         assert event.is_usable() is True
 
     def test_required_fields_enforced(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             NormalizedExternalEvent(  # type: ignore[call-arg]
                 event_type=ExternalEventType.MACRO_RELEASE,
                 occurred_at=datetime.now(UTC),
@@ -148,7 +148,7 @@ class TestNormalizedExternalEvent:
             )
 
     def test_extra_fields_forbidden(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             NormalizedExternalEvent(
                 event_type=ExternalEventType.MACRO_RELEASE,
                 title="Test",

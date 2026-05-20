@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-
-import pytest
+from typing import Literal
 
 from domain.attribution.attribution_engine import (
     DEFAULT_ATTRIBUTION_RULES,
@@ -15,13 +14,11 @@ from domain.attribution.enums import AttributionConfidence
 from domain.attribution.models import AttributionRule
 from domain.events.enums import (
     ExternalEventFreshness,
-    ExternalEventStatus,
     ExternalEventType,
     SourceReliabilityTier,
 )
 from domain.events.models import NormalizedExternalEvent
 from domain.macro.comparison import FeatureDelta
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,7 +47,7 @@ def _make_event(
 
 def _make_delta(
     indicator: str = "cpi",
-    direction: str = "increased",
+    direction: Literal["increased", "decreased", "unchanged", "no_prior"] = "increased",
     delta: float = 0.2,
 ) -> FeatureDelta:
     return FeatureDelta(

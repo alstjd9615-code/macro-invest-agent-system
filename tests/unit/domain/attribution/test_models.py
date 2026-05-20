@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import pytest
-
 from domain.attribution.enums import AttributionConfidence, AttributionMatchStatus
 from domain.attribution.models import (
     AttributionRule,

@@ -70,6 +70,8 @@ Impact mapping rules (v1 heuristic)
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from domain.events.enums import ExternalEventType, SourceReliabilityTier
 from domain.events.impact import ExternalEventImpact, ExternalEventImpactRouting
 from domain.events.models import NormalizedExternalEvent
@@ -317,7 +319,7 @@ def _handle_other(event: NormalizedExternalEvent) -> ExternalEventImpact:
     )
 
 
-_HANDLERS: dict[ExternalEventType, object] = {
+_HANDLERS: dict[ExternalEventType, Callable[[NormalizedExternalEvent], ExternalEventImpact]] = {
     ExternalEventType.CENTRAL_BANK_DECISION: _handle_central_bank_decision,
     ExternalEventType.POLICY_ANNOUNCEMENT: _handle_policy_announcement,
     ExternalEventType.GEOPOLITICAL_DEVELOPMENT: _handle_geopolitical_development,

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aleph-One — Intelligence Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Fixed status bar -->
+  <header class="status-bar">
+    <span class="brand">◈ ALEPH-ONE</span>
+    <div class="status-center">
+      <span class="status-dot"></span>
+      <span id="regime-badge" class="regime-badge">INITIALIZING</span>
+      <span id="regime-family" class="regime-family"></span>
+    </div>
+    <div class="status-right">
+      <span id="clock" class="clock">--:--:-- UTC</span>
+      <span class="live-indicator">● LIVE</span>
+    </div>
+  </header>
+
+  <!-- Layer 1 (background): Global Intel Stream -->
+  <section class="global-intel">
+    <svg id="world-map-svg" viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <!-- North America -->
+      <path class="continent" d="M 80 55 L 110 42 L 150 44 L 185 58 L 210 75 L 220 105 L 205 130 L 185 148 L 158 162 L 130 168 L 105 158 L 82 138 L 70 110 L 72 80 Z" />
+      <!-- Central America (stub) -->
+      <path class="continent" d="M 150 168 L 168 172 L 172 185 L 158 188 L 145 180 Z" />
+      <!-- South America -->
+      <path class="continent" d="M 148 198 L 182 190 L 210 205 L 222 235 L 215 258 L 190 245 L 168 230 L 145 215 Z" />
+      <!-- Greenland -->
+      <path class="continent" d="M 185 18 L 220 14 L 238 28 L 228 46 L 205 50 L 186 38 Z" />
+      <!-- Western Europe -->
+      <path class="continent" d="M 390 52 L 418 46 L 450 50 L 468 64 L 472 82 L 462 98 L 442 106 L 418 102 L 398 85 L 386 68 Z" />
+      <!-- Eastern Europe / Russia West -->
+      <path class="continent" d="M 470 40 L 520 36 L 560 42 L 572 58 L 565 78 L 545 88 L 510 88 L 478 80 L 466 62 Z" />
+      <!-- North Africa -->
+      <path class="continent" d="M 392 112 L 460 108 L 512 112 L 520 135 L 510 158 L 470 165 L 425 158 L 394 140 Z" />
+      <!-- Sub-Saharan Africa -->
+      <path class="continent" d="M 418 162 L 468 158 L 498 168 L 502 200 L 488 228 L 460 238 L 430 228 L 415 200 L 412 178 Z" />
+      <!-- Middle East -->
+      <path class="continent" d="M 522 88 L 568 82 L 592 95 L 590 120 L 565 132 L 532 128 L 516 112 Z" />
+      <!-- Central / South Asia -->
+      <path class="continent" d="M 590 60 L 660 48 L 710 55 L 730 75 L 725 100 L 695 118 L 655 122 L 618 112 L 594 94 Z" />
+      <!-- Southeast Asia -->
+      <path class="continent" d="M 698 105 L 740 98 L 758 115 L 752 138 L 720 148 L 695 135 Z" />
+      <!-- East Asia (China/Japan area) -->
+      <path class="continent" d="M 718 48 L 780 40 L 820 52 L 830 72 L 815 92 L 780 98 L 745 90 L 722 70 Z" />
+      <!-- Australia -->
+      <path class="continent" d="M 700 188 L 756 182 L 790 196 L 800 225 L 782 248 L 745 255 L 710 244 L 692 218 Z" />
+      <!-- New Zealand (stub) -->
+      <path class="continent" d="M 818 220 L 830 214 L 836 226 L 824 232 Z" />
+    </svg>
+    <div class="intel-overlay"></div>
+    <!-- Heatmap dots injected by world-map.js -->
+    <div class="news-ticker-bar">
+      <span class="ticker-label">INTEL STREAM</span>
+      <div class="ticker-track">
+        <span id="ticker-content">Connecting to global intelligence feed…</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <div class="main-layout">
+
+    <!-- Left sidebar: Personal Alpha -->
+    <aside class="panel-left">
+      <div class="panel-title">PERSONAL ALPHA</div>
+
+      <div class="glass-card alpha-card">
+        <div class="alpha-label">PORTFOLIO HEALTH</div>
+        <div id="alpha-health-value" class="alpha-big neon-cyan">—</div>
+        <div id="alpha-health-sub" class="alpha-sub">initializing…</div>
+      </div>
+
+      <div class="glass-card alpha-card">
+        <div class="alpha-label">MACRO REGIME</div>
+        <div id="alpha-regime-value" class="alpha-big">—</div>
+        <div id="alpha-regime-family" class="alpha-sub">—</div>
+      </div>
+
+      <div class="glass-card alpha-card alpha-card--signals">
+        <div class="alpha-label">ACTIVE SIGNALS</div>
+        <ul id="alpha-signals-list" class="signals-list">
+          <li class="signal-item signal-loading">Loading…</li>
+        </ul>
+      </div>
+
+      <div class="glass-card alpha-card">
+        <div class="alpha-label">CONFIDENCE</div>
+        <div id="alpha-confidence" class="alpha-big">—</div>
+        <div id="alpha-confidence-bar" class="confidence-bar">
+          <div id="alpha-confidence-fill" class="confidence-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Command + Response -->
+    <main class="panel-center">
+
+      <!-- OMNI-COMMAND TERMINAL -->
+      <div class="command-terminal glass-card">
+        <span class="terminal-icon">◉</span>
+        <span class="terminal-prompt">OMNI://</span>
+        <input
+          id="command-input"
+          class="command-input"
+          type="text"
+          value="How should I adjust my tech exposure for Q3?"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="analyze-btn" class="analyze-btn">
+          <span class="btn-icon">▶</span> ANALYZE
+        </button>
+      </div>
+
+      <!-- Intelligence Synthesis Response Card -->
+      <div id="response-card" class="response-card glass-card">
+        <div class="response-header">
+          <span class="response-title">◈ INTELLIGENCE SYNTHESIS</span>
+          <div class="response-meta">
+            <span id="response-status" class="response-status status--ready">READY</span>
+            <span id="response-timestamp" class="response-ts"></span>
+          </div>
+        </div>
+
+        <div class="response-grid">
+          <!-- Left: 3D Portfolio Network -->
+          <div class="network-panel">
+            <div class="sub-label">
+              3D PORTFOLIO NETWORK
+              <span class="sub-label-meta" id="network-meta">5 assets · AI-weighted vectors</span>
+            </div>
+            <div class="canvas-wrapper">
+              <canvas id="network-canvas"></canvas>
+              <div class="canvas-corner canvas-corner--tl"></div>
+              <div class="canvas-corner canvas-corner--tr"></div>
+              <div class="canvas-corner canvas-corner--bl"></div>
+              <div class="canvas-corner canvas-corner--br"></div>
+            </div>
+          </div>
+
+          <!-- Right: Risk / Opportunity Matrix -->
+          <div class="matrix-panel">
+            <div class="sub-label">
+              RISK / OPPORTUNITY MATRIX
+              <span class="sub-label-meta">Q3 volatility × sentiment</span>
+            </div>
+            <div class="matrix-wrapper">
+              <svg id="risk-matrix-svg" viewBox="0 0 520 310" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Animated scan line -->
+        <div class="scan-line" id="scan-line"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/network-map.js"></script>
+  <script src="js/risk-matrix.js"></script>
+  <script src="js/world-map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
