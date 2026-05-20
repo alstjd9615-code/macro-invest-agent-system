@@ -18,6 +18,7 @@ Architecture
 from __future__ import annotations
 
 import os
+from typing import cast
 
 import requests
 import streamlit as st
@@ -168,8 +169,8 @@ with col_alerts:
     if alerts_data is None:
         render_error("Could not fetch alerts.")
     else:
-        alerts = alerts_data.get("alerts", [])
-        total = alerts_data.get("total", 0)
+        alerts = cast(list[dict[str, object]], alerts_data.get("alerts", []))
+        total = cast(int, alerts_data.get("total", 0))
 
         if not alerts:
             render_empty("No recent alerts.")
@@ -177,12 +178,12 @@ with col_alerts:
             st.caption(f"Showing {len(alerts)} of {total} alerts")
             _SEV_ICONS = {"critical": "🔴", "warning": "🟡", "info": "🔵"}
             for alert in alerts:
-                sev = alert.get("severity", "info")
+                sev = cast(str, alert.get("severity", "info"))
                 icon = _SEV_ICONS.get(sev, "⚪")
-                msg = alert.get("message", "")
-                rule = alert.get("rule_name", "")
-                t = alert.get("triggered_at", "")[:16].replace("T", " ")
-                ack = alert.get("acknowledgement_state", "active")
+                msg = cast(str, alert.get("message", ""))
+                rule = cast(str, alert.get("rule_name", ""))
+                t = cast(str, alert.get("triggered_at", ""))[:16].replace("T", " ")
+                ack = cast(str, alert.get("acknowledgement_state", "active"))
                 ack_badge = " ✅" if ack == "acknowledged" else ""
                 with st.expander(f"{icon} {rule}{ack_badge}", expanded=sev == "critical"):
                     st.caption(f"🕐 {t}  ·  Severity: **{sev}**")
@@ -214,17 +215,17 @@ with tab_history:
         compare_regime_data = _get("/api/regimes/compare")
 
     if compare_regime_data:
-        delta = compare_regime_data.get("delta") or {}
-        changed = compare_regime_data.get("changed", False)
-        curr_label = compare_regime_data.get("current_regime_label", "—")
-        prior_label_h = compare_regime_data.get("prior_regime_label", "—")
-        severity = delta.get("severity", "unchanged")
-        rationale_h = compare_regime_data.get("current_rationale_summary", "")
+        delta = cast(dict[str, object], compare_regime_data.get("delta") or {})
+        changed = cast(bool, compare_regime_data.get("changed", False))
+        curr_label = cast(str, compare_regime_data.get("current_regime_label", "—"))
+        prior_label_h = cast(str, compare_regime_data.get("prior_regime_label", "—"))
+        severity = cast(str, delta.get("severity", "unchanged"))
+        rationale_h = cast(str, compare_regime_data.get("current_rationale_summary", ""))
 
         if changed:
-            label_tr = delta.get("label_transition") or f"{prior_label_h} → {curr_label}"
+            label_tr = cast(str, delta.get("label_transition") or f"{prior_label_h} → {curr_label}")
             st.info(f"🔄 **Regime change:** {label_tr}  ·  Severity: **{severity}**")
-            notable = delta.get("notable_flags", [])
+            notable = cast(list[str], delta.get("notable_flags", []))
             if notable:
                 st.caption("Notable flags: " + ", ".join(notable))
         else:
@@ -239,8 +240,8 @@ with tab_history:
         with c2:
             st.metric("Prior", prior_label_h or "—")
         with c3:
-            conf_dir = delta.get("confidence_direction", "")
-            conf_tr = delta.get("confidence_transition") or compare_regime_data.get("current_confidence", "—")
+            conf_dir = cast(str, delta.get("confidence_direction", ""))
+            conf_tr = cast(str, delta.get("confidence_transition") or compare_regime_data.get("current_confidence", "—"))
             st.metric("Confidence", conf_tr, delta=conf_dir if conf_dir not in ("not_applicable", "unchanged") else None)
 
     st.markdown("---")

@@ -41,7 +41,7 @@ Fallback matches produce ``confidence=low`` and ``match_status=partial``.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from domain.attribution.enums import AttributionConfidence, AttributionMatchStatus
 from domain.attribution.models import (
@@ -251,7 +251,7 @@ def attribute_delta(
     active_rules = [r for r in (rules or DEFAULT_ATTRIBUTION_RULES) if r.is_active]
 
     indicator = delta.indicator_type
-    matched_candidates: list[CandidateEventContext] = []
+    matched_candidates: list[tuple[AttributionRule, CandidateEventContext]] = []
     partial_candidates: list[CandidateEventContext] = []
 
     for event in candidate_events:
@@ -270,7 +270,7 @@ def attribute_delta(
             if lag > rule.max_lag_days:
                 continue
             candidate = _candidate_from_event(event, lag, AttributionMatchStatus.MATCHED)
-            matched_candidates.append((rule, candidate))  # type: ignore[arg-type]
+            matched_candidates.append((rule, candidate))
             break
         else:
             # Heuristic fallback
@@ -283,7 +283,7 @@ def attribute_delta(
     # matched_candidates contains (rule, candidate) tuples for exact matches
     exact: list[CandidateEventContext] = []
     best_rule: AttributionRule | None = None
-    for rule, cand in matched_candidates:  # type: ignore[misc]
+    for rule, cand in matched_candidates:
         exact.append(cand)
         if best_rule is None:
             best_rule = rule

@@ -67,8 +67,9 @@ class TestExternalEventImpact:
 
     def test_extra_fields_forbidden(self) -> None:
         import pytest
+        from pydantic import ValidationError
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ExternalEventImpact(
                 source_event_id="x",
                 source_event_type=ExternalEventType.OTHER,
